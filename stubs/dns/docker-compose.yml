@@ -1,0 +1,13 @@
+services:
+  dns:
+    build: .
+    container_name: launchpad-dns
+    ports:
+      - "53:53/udp"
+    restart: unless-stopped
+    networks:
+      - launchpad
+
+networks:
+  launchpad:
+    name: launchpad

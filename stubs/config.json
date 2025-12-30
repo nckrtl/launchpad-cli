@@ -1,0 +1,14 @@
+{
+    "paths": [
+        "~/Projects",
+        "~/Clients"
+    ],
+    "default_php_version": "8.3",
+    "tld": "test",
+    "sites": {},
+    "services": {
+        "postgres": { "enabled": true },
+        "redis": { "enabled": true },
+        "mailpit": { "enabled": true }
+    }
+}

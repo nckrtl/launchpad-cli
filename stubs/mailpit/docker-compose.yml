@@ -1,0 +1,14 @@
+services:
+  mailpit:
+    image: axllent/mailpit
+    container_name: launchpad-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+    networks:
+      - launchpad
+
+networks:
+  launchpad:
+    external: true
