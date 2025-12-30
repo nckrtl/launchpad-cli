@@ -63,6 +63,11 @@ class ConfigManager
         return $this->get('tld', 'test');
     }
 
+    public function getHostIp(): string
+    {
+        return $this->get('host_ip', '127.0.0.1');
+    }
+
     public function getSiteOverrides(): array
     {
         return $this->get('sites', []);

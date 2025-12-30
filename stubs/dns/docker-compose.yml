@@ -1,13 +1,10 @@
 services:
   dns:
-    build: .
+    build:
+      context: .
+      args:
+        HOST_IP: ${HOST_IP:-127.0.0.1}
+        TLD: ${TLD:-test}
     container_name: launchpad-dns
-    ports:
-      - "53:53/udp"
+    network_mode: host
     restart: unless-stopped
-    networks:
-      - launchpad
-
-networks:
-  launchpad:
-    name: launchpad

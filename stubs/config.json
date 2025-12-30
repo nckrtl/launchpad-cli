@@ -5,6 +5,7 @@
     ],
     "default_php_version": "8.3",
     "tld": "test",
+    "host_ip": "127.0.0.1",
     "sites": {},
     "services": {
         "postgres": { "enabled": true },

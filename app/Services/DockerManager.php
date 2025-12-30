@@ -101,7 +101,8 @@ class DockerManager
             return false;
         }
 
-        $result = Process::run("docker compose -f {$composePath} build");
+        $env = $this->getServiceEnv($service);
+        $result = Process::env($env)->run("docker compose -f {$composePath} build");
 
         if (! $result->successful()) {
             $this->lastError = $result->errorOutput() ?: $result->output();
@@ -151,5 +152,17 @@ class DockerManager
     protected function getComposePath(string $service): string
     {
         return "{$this->basePath}/{$service}/docker-compose.yml";
+    }
+
+    protected function getServiceEnv(string $service): array
+    {
+        if ($service === 'dns') {
+            return [
+                'HOST_IP' => $this->configManager->getHostIp(),
+                'TLD' => $this->configManager->getTld(),
+            ];
+        }
+
+        return [];
     }
 }
