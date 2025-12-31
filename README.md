@@ -1,41 +1,81 @@
-<p align="center">
-    <img title="Laravel Zero" height="100" src="https://raw.githubusercontent.com/laravel-zero/docs/master/images/logo/laravel-zero-readme.png" alt="Laravel Zero Logo" />
-</p>
+# Launchpad CLI
 
-<p align="center">
-  <a href="https://github.com/laravel-zero/framework/actions"><img src="https://github.com/laravel-zero/laravel-zero/actions/workflows/tests.yml/badge.svg" alt="Build Status" /></a>
-  <a href="https://packagist.org/packages/laravel-zero/framework"><img src="https://img.shields.io/packagist/dt/laravel-zero/framework.svg" alt="Total Downloads" /></a>
-  <a href="https://packagist.org/packages/laravel-zero/framework"><img src="https://img.shields.io/packagist/v/laravel-zero/framework.svg?label=stable" alt="Latest Stable Version" /></a>
-  <a href="https://packagist.org/packages/laravel-zero/framework"><img src="https://img.shields.io/packagist/l/laravel-zero/framework.svg" alt="License" /></a>
-</p>
+A local PHP development environment powered by Docker. Launchpad provides a simple, fast way to run PHP applications locally with automatic HTTPS, multiple PHP versions, and essential services.
 
-Laravel Zero was created by [Nuno Maduro](https://github.com/nunomaduro) and [Owen Voke](https://github.com/owenvoke), and is a micro-framework that provides an elegant starting point for your console application. It is an **unofficial** and customized version of Laravel optimized for building command-line applications.
+## Features
 
-- Built on top of the [Laravel](https://laravel.com) components.
-- Optional installation of Laravel [Eloquent](https://laravel-zero.com/docs/database/), Laravel [Logging](https://laravel-zero.com/docs/logging/) and many others.
-- Supports interactive [menus](https://laravel-zero.com/docs/build-interactive-menus/) and [desktop notifications](https://laravel-zero.com/docs/send-desktop-notifications/) on Linux, Windows & MacOS.
-- Ships with a [Scheduler](https://laravel-zero.com/docs/task-scheduling/) and  a [Standalone Compiler](https://laravel-zero.com/docs/build-a-standalone-application/).
-- Integration with [Collision](https://github.com/nunomaduro/collision) - Beautiful error reporting
-- Follow the creator Nuno Maduro:
-    - YouTube: **[youtube.com/@nunomaduro](https://www.youtube.com/@nunomaduro)** — Videos every weekday
-    - Twitch: **[twitch.tv/enunomaduro](https://www.twitch.tv/enunomaduro)** — Streams (almost) every weekday
-    - Twitter / X: **[x.com/enunomaduro](https://x.com/enunomaduro)**
-    - LinkedIn: **[linkedin.com/in/nunomaduro](https://www.linkedin.com/in/nunomaduro)**
-    - Instagram: **[instagram.com/enunomaduro](https://www.instagram.com/enunomaduro)**
-    - Tiktok: **[tiktok.com/@enunomaduro](https://www.tiktok.com/@enunomaduro)**
+- **Multiple PHP Versions** - Run PHP 8.3 and 8.4 side-by-side via FrankenPHP
+- **Automatic HTTPS** - Local SSL certificates via Caddy
+- **Essential Services** - PostgreSQL, Redis, and Mailpit included
+- **Simple DNS** - Automatic `.test` domain resolution
+- **Per-site PHP** - Configure PHP version per project
 
-------
+## Installation
 
-## Documentation
+Download the latest release:
 
-For full documentation, visit [laravel-zero.com](https://laravel-zero.com/).
+```bash
+curl -L -o ~/.local/bin/launchpad https://github.com/nckrtl/launchpad-cli/releases/latest/download/launchpad.phar
+chmod +x ~/.local/bin/launchpad
+```
 
-## Support the development
-**Do you like this project? Support it by donating**
+Make sure `~/.local/bin` is in your PATH.
 
-- PayPal: [Donate](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=66BYDWAT92N6L)
-- Patreon: [Donate](https://www.patreon.com/nunomaduro)
+## Quick Start
+
+1. Initialize Launchpad (first time only):
+   ```bash
+   launchpad init
+   ```
+
+2. Start the services:
+   ```bash
+   launchpad start
+   ```
+
+3. Trust the local CA certificate (for HTTPS):
+   ```bash
+   launchpad trust
+   ```
+
+4. Link your project (creates a symlink in ~/projects):
+   ```bash
+   ln -s /path/to/your/project ~/projects/myapp
+   ```
+
+5. Visit https://myapp.test in your browser!
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `launchpad init` | First-time setup: creates config, pulls images, sets up DNS |
+| `launchpad start` | Start all Launchpad services |
+| `launchpad stop` | Stop all Launchpad services |
+| `launchpad restart` | Restart all Launchpad services |
+| `launchpad status` | Show status and running services |
+| `launchpad sites` | List all sites with their PHP versions |
+| `launchpad php <site> <version>` | Set PHP version for a site (8.3 or 8.4) |
+| `launchpad logs` | Tail container logs |
+| `launchpad trust` | Install Caddy root CA for local HTTPS |
+
+## Services & Ports
+
+| Service | Port(s) | Description |
+|---------|---------|-------------|
+| Caddy | 80, 443 | Web server with automatic HTTPS |
+| PHP 8.3 | - | FrankenPHP worker |
+| PHP 8.4 | - | FrankenPHP worker |
+| PostgreSQL | 5432 | Database server |
+| Redis | 6379 | Cache server |
+| Mailpit | 1025, 8025 | Mail catcher (SMTP: 1025, Web UI: 8025) |
+| DNS | 53 | Local DNS resolver for .test domains |
+
+## Requirements
+
+- Docker
+- macOS or Linux
 
 ## License
 
-Laravel Zero is an open-source software licensed under the MIT license.
+MIT License
