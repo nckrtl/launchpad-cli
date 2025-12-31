@@ -76,6 +76,50 @@ Make sure `~/.local/bin` is in your PATH.
 - Docker
 - macOS or Linux
 
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/nckrtl/launchpad-cli.git
+cd launchpad-cli
+composer install
+
+# Enable git hooks
+git config core.hooksPath .githooks
+```
+
+### Quality Tools
+
+| Tool | Command | Description |
+|------|---------|-------------|
+| PHPStan | `./vendor/bin/phpstan analyse` | Static analysis (level 5) |
+| Rector | `./vendor/bin/rector` | Automated refactoring |
+| Pint | `./vendor/bin/pint` | Code formatting |
+| Pest | `./vendor/bin/pest` | Test suite |
+
+### Running Checks
+
+```bash
+# Run all checks (same as pre-commit hook)
+./vendor/bin/rector --dry-run
+./vendor/bin/pint --test
+./vendor/bin/phpstan analyse --memory-limit=512M
+./vendor/bin/pest
+```
+
+### Pre-commit Hook
+
+The project includes a pre-commit hook that runs all quality checks before each commit. Enable it with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### CI
+
+GitHub Actions runs the full quality check suite on every push and PR to main.
+
 ## License
 
 MIT License
