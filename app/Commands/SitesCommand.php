@@ -2,27 +2,44 @@
 
 namespace App\Commands;
 
+use App\Concerns\WithJsonOutput;
 use App\Services\ConfigManager;
 use App\Services\SiteScanner;
 use LaravelZero\Framework\Commands\Command;
 
 class SitesCommand extends Command
 {
-    protected $signature = 'sites';
+    use WithJsonOutput;
+
+    protected $signature = 'sites {--json : Output as JSON}';
 
     protected $description = 'List all sites with their PHP versions';
 
     public function handle(SiteScanner $siteScanner, ConfigManager $configManager): int
     {
         $sites = $siteScanner->scan();
+        $defaultPhp = $configManager->getDefaultPhpVersion();
+
+        if ($this->wantsJson()) {
+            return $this->outputJsonSuccess([
+                'sites' => array_map(fn ($site) => [
+                    'name' => $site['name'],
+                    'domain' => $site['domain'],
+                    'path' => $site['path'],
+                    'php_version' => $site['php_version'],
+                    'has_custom_php' => $site['has_custom_php'],
+                    'secure' => true, // All sites use TLS via Caddy
+                ], $sites),
+                'default_php_version' => $defaultPhp,
+                'sites_count' => count($sites),
+            ]);
+        }
 
         if (empty($sites)) {
             $this->warn('No sites found. Add paths to your config.json file.');
 
             return self::SUCCESS;
         }
-
-        $defaultPhp = $configManager->getDefaultPhpVersion();
 
         $this->info('Sites:');
         $this->newLine();

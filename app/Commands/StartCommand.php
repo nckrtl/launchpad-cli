@@ -2,6 +2,8 @@
 
 namespace App\Commands;
 
+use App\Concerns\WithJsonOutput;
+use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\DockerManager;
 use App\Services\PhpComposeGenerator;
@@ -9,7 +11,9 @@ use LaravelZero\Framework\Commands\Command;
 
 class StartCommand extends Command
 {
-    protected $signature = 'start';
+    use WithJsonOutput;
+
+    protected $signature = 'start {--json : Output as JSON}';
 
     protected $description = 'Start all Launchpad services';
 
@@ -18,26 +22,69 @@ class StartCommand extends Command
         CaddyfileGenerator $caddyfileGenerator,
         PhpComposeGenerator $phpComposeGenerator
     ): int {
-        $this->info('Starting Launchpad...');
+        $results = [];
+        $allSuccess = true;
 
-        $this->task('Generating configuration', function () use ($caddyfileGenerator, $phpComposeGenerator) {
+        // Generate configuration
+        $configResult = $this->runStep('config', 'Generating configuration', function () use ($caddyfileGenerator, $phpComposeGenerator) {
             $phpComposeGenerator->generate();
             $caddyfileGenerator->generate();
 
             return true;
         });
-        $this->task('Starting DNS', fn () => $dockerManager->start('dns'));
-        $this->task('Starting PHP containers', fn () => $dockerManager->start('php'));
-        $this->task('Starting Caddy', fn () => $dockerManager->start('caddy'));
+        $results['config'] = $configResult;
+        $allSuccess = $allSuccess && $configResult;
 
-        $services = ['postgres', 'redis', 'mailpit'];
+        // Start services in order
+        $services = ['dns', 'php', 'caddy', 'postgres', 'redis', 'mailpit'];
+
         foreach ($services as $service) {
-            $this->task("Starting {$service}", fn () => $dockerManager->start($service));
+            $result = $this->runStep($service, "Starting {$service}", fn () => $dockerManager->start($service));
+            $results[$service] = $result;
+            $allSuccess = $allSuccess && $result;
+        }
+
+        if ($this->wantsJson()) {
+            return $this->outputJson([
+                'success' => $allSuccess,
+                'data' => [
+                    'action' => 'start',
+                    'services' => $results,
+                ],
+            ], $allSuccess ? self::SUCCESS : ExitCode::ServiceFailed->value);
         }
 
         $this->newLine();
-        $this->info('Launchpad is running!');
+        if ($allSuccess) {
+            $this->info('Launchpad is running!');
+        } else {
+            $this->warn('Some services failed to start.');
+        }
 
-        return self::SUCCESS;
+        return $allSuccess ? self::SUCCESS : ExitCode::ServiceFailed->value;
+    }
+
+    private function runStep(string $name, string $label, callable $callback): bool
+    {
+        if ($this->wantsJson()) {
+            try {
+                return (bool) $callback();
+            } catch (\Exception $e) {
+                return false;
+            }
+        }
+
+        $result = true;
+        $this->task($label, function () use ($callback, &$result) {
+            try {
+                $result = (bool) $callback();
+            } catch (\Exception $e) {
+                $result = false;
+            }
+
+            return $result;
+        });
+
+        return $result;
     }
 }

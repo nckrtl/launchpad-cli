@@ -1,4 +1,6 @@
 {
+    "main": "launchpad",
+    "output": "launchpad.phar",
     "chmod": "0755",
     "directories": [
         "app",

@@ -2,6 +2,8 @@
 
 namespace App\Commands;
 
+use App\Concerns\WithJsonOutput;
+use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\SiteScanner;
@@ -9,10 +11,13 @@ use LaravelZero\Framework\Commands\Command;
 
 class PhpCommand extends Command
 {
+    use WithJsonOutput;
+
     protected $signature = 'php
         {site : The site name to configure}
         {version? : The PHP version to use (8.3, 8.4)}
-        {--reset : Reset to default PHP version}';
+        {--reset : Reset to default PHP version}
+        {--json : Output as JSON}';
 
     protected $description = 'Set PHP version for a site';
 
@@ -30,40 +35,92 @@ class PhpCommand extends Command
         // Verify site exists
         $siteInfo = $siteScanner->findSite($site);
         if (! $siteInfo) {
+            if ($this->wantsJson()) {
+                return $this->outputJsonError(
+                    "Site '{$site}' not found.",
+                    ExitCode::InvalidArguments->value
+                );
+            }
             $this->error("Site '{$site}' not found.");
 
-            return self::FAILURE;
+            return ExitCode::InvalidArguments->value;
         }
 
         if ($reset) {
             $configManager->removeSiteOverride($site);
-            $this->info("Reset {$site} to default PHP version ({$configManager->getDefaultPhpVersion()})");
-        } else {
-            if (! $version) {
-                $this->error('Please provide a PHP version or use --reset');
+            $newVersion = $configManager->getDefaultPhpVersion();
 
-                return self::FAILURE;
+            $this->regenerateAndReload($caddyfileGenerator);
+
+            if ($this->wantsJson()) {
+                return $this->outputJsonSuccess([
+                    'site' => $site,
+                    'php_version' => $newVersion,
+                    'action' => 'reset',
+                    'reloaded' => true,
+                ]);
             }
 
-            if (! in_array($version, $this->validVersions)) {
-                $this->error("Invalid PHP version. Valid versions: ".implode(', ', $this->validVersions));
+            $this->info("Reset {$site} to default PHP version ({$newVersion})");
 
-                return self::FAILURE;
-            }
-
-            $configManager->setSitePhpVersion($site, $version);
-            $this->info("Set {$site} to PHP {$version}");
+            return self::SUCCESS;
         }
 
-        // Regenerate Caddyfile and reload
-        $this->task('Regenerating Caddyfile', fn () => $caddyfileGenerator->generate() || true);
+        if (! $version) {
+            if ($this->wantsJson()) {
+                return $this->outputJsonError(
+                    'Please provide a PHP version or use --reset',
+                    ExitCode::InvalidArguments->value
+                );
+            }
+            $this->error('Please provide a PHP version or use --reset');
 
-        if ($caddyfileGenerator->reload()) {
+            return ExitCode::InvalidArguments->value;
+        }
+
+        if (! in_array($version, $this->validVersions)) {
+            $message = 'Invalid PHP version. Valid versions: ' . implode(', ', $this->validVersions);
+            if ($this->wantsJson()) {
+                return $this->outputJsonError($message, ExitCode::InvalidArguments->value, [
+                    'valid_versions' => $this->validVersions,
+                ]);
+            }
+            $this->error($message);
+
+            return ExitCode::InvalidArguments->value;
+        }
+
+        $configManager->setSitePhpVersion($site, $version);
+        $reloaded = $this->regenerateAndReload($caddyfileGenerator);
+
+        if ($this->wantsJson()) {
+            return $this->outputJsonSuccess([
+                'site' => $site,
+                'php_version' => $version,
+                'action' => 'set',
+                'reloaded' => $reloaded,
+            ]);
+        }
+
+        $this->info("Set {$site} to PHP {$version}");
+
+        if ($reloaded) {
             $this->info('Caddy reloaded');
         } else {
             $this->warn('Could not reload Caddy. You may need to restart Launchpad.');
         }
 
         return self::SUCCESS;
+    }
+
+    private function regenerateAndReload(CaddyfileGenerator $caddyfileGenerator): bool
+    {
+        if (! $this->wantsJson()) {
+            $this->task('Regenerating Caddyfile', fn () => $caddyfileGenerator->generate() || true);
+        } else {
+            $caddyfileGenerator->generate();
+        }
+
+        return $caddyfileGenerator->reload();
     }
 }
