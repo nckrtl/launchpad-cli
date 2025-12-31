@@ -25,7 +25,8 @@ app/
 │   ├── SitesCommand.php      # List registered sites
 │   ├── PhpCommand.php        # Set PHP version per site
 │   ├── LogsCommand.php       # View service logs
-│   └── TrustCommand.php      # Trust the local CA certificate
+│   ├── TrustCommand.php      # Trust the local CA certificate
+│   └── UpgradeCommand.php    # Self-update to latest version
 ├── Concerns/
 │   └── WithJsonOutput.php    # Trait for JSON output support
 ├── Enums/
@@ -56,6 +57,8 @@ All commands support `--json` flag for machine-readable output.
 | `launchpad php <site> --reset` | Reset to default PHP version |
 | `launchpad logs [service]` | View service logs |
 | `launchpad trust` | Trust the local CA certificate |
+| `launchpad upgrade` | Upgrade to the latest version |
+| `launchpad upgrade --check` | Check for available updates |
 
 ## JSON Output Format
 
@@ -237,7 +240,7 @@ Tests are located in `tests/` directory:
 
 | Category | Tests |
 |----------|-------|
-| Commands | StatusCommand, SitesCommand, PhpCommand, StartCommand, StopCommand, RestartCommand, LogsCommand |
+| Commands | StatusCommand, SitesCommand, PhpCommand, StartCommand, StopCommand, RestartCommand, LogsCommand, UpgradeCommand |
 | Services | SiteScanner, ConfigManager, CaddyfileGenerator, PhpComposeGenerator |
 | Enums | ExitCode |
 

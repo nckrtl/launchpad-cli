@@ -58,6 +58,8 @@ Make sure `~/.local/bin` is in your PATH.
 | `launchpad php <site> <version>` | Set PHP version for a site (8.3 or 8.4) |
 | `launchpad logs` | Tail container logs |
 | `launchpad trust` | Install Caddy root CA for local HTTPS |
+| `launchpad upgrade` | Upgrade to the latest version |
+| `launchpad upgrade --check` | Check for available updates |
 
 ## Services & Ports
 
