@@ -1,3 +1,3 @@
 FROM dunglas/frankenphp:php8.4
 
-RUN install-php-extensions     redis     pcntl     intl     exif     gd     zip     bcmath
+RUN install-php-extensions     redis     pdo_pgsql     pdo_mysql     pcntl     intl     exif     gd     zip     bcmath
