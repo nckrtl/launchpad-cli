@@ -27,6 +27,7 @@ app/
 │   ├── LogsCommand.php       # View service logs
 │   ├── TrustCommand.php      # Trust the local CA certificate
 │   └── UpgradeCommand.php    # Self-update to latest version
+    └── RebuildCommand.php       # Rebuild PHP images with extensions
 ├── Concerns/
 │   └── WithJsonOutput.php    # Trait for JSON output support
 ├── Enums/

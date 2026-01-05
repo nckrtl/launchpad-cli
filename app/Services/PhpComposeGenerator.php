@@ -20,7 +20,10 @@ class PhpComposeGenerator
 
         $compose = "services:
   php-83:
-    image: dunglas/frankenphp:php8.3
+    build:
+      context: .
+      dockerfile: Dockerfile.php83
+    image: launchpad-php:8.3
     container_name: launchpad-php-83
     ports:
       - \"8083:8080\"
@@ -32,7 +35,10 @@ class PhpComposeGenerator
       - launchpad
 
   php-84:
-    image: dunglas/frankenphp:php8.4
+    build:
+      context: .
+      dockerfile: Dockerfile.php84
+    image: launchpad-php:8.4
     container_name: launchpad-php-84
     ports:
       - \"8084:8080\"

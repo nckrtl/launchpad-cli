@@ -59,7 +59,9 @@ Make sure `~/.local/bin` is in your PATH.
 | `launchpad logs` | Tail container logs |
 | `launchpad trust` | Install Caddy root CA for local HTTPS |
 | `launchpad upgrade` | Upgrade to the latest version |
+| `launchpad rebuild` | Rebuild PHP images with Redis and other extensions |
 | `launchpad upgrade --check` | Check for available updates |
+| `launchpad rebuild` | Rebuild PHP images with Redis and other extensions |
 
 ## Services & Ports
 

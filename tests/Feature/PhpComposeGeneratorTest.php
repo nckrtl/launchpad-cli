@@ -29,8 +29,11 @@ it('generates docker-compose with volume mounts', function () {
 
     expect($compose)->toContain('php-83:');
     expect($compose)->toContain('php-84:');
-    expect($compose)->toContain('dunglas/frankenphp:php8.3');
-    expect($compose)->toContain('dunglas/frankenphp:php8.4');
+    expect($compose)->toContain('build:');
+    expect($compose)->toContain('Dockerfile.php83');
+    expect($compose)->toContain('Dockerfile.php84');
+    expect($compose)->toContain('image: launchpad-php:8.3');
+    expect($compose)->toContain('image: launchpad-php:8.4');
     expect($compose)->toContain('launchpad-php-83');
     expect($compose)->toContain('launchpad-php-84');
     expect($compose)->toContain('/home/user/Projects:/app/Projects');

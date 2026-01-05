@@ -96,9 +96,9 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 6. Pull PHP images
-        $this->task('Pulling PHP images (this may take a while)', function () use ($dockerManager) {
-            $result = $dockerManager->pull('php');
+        // 6. Build PHP images (with Redis and other extensions)
+        $this->task('Building PHP images (this may take a while)', function () use ($dockerManager) {
+            $result = $dockerManager->build('php');
             if (! $result && $dockerManager->getLastError()) {
                 $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
             }
