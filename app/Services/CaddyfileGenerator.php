@@ -92,7 +92,7 @@ class CaddyfileGenerator
 
             if ($hasVite) {
                 $caddyfile .= "\n";
-                $caddyfile .= "    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/*\n";
+                $caddyfile .= "    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/* /__devtools__/*\n";
                 $caddyfile .= "    reverse_proxy @vite 172.18.0.1:5173\n";
                 $caddyfile .= "\n";
                 $caddyfile .= "    @ws {\n";
