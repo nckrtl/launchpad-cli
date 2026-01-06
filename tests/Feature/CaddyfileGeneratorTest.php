@@ -24,7 +24,7 @@ it('generates caddyfile with sites', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn(['~/Projects']);
 
-    $this->siteScanner->shouldReceive('scan')->andReturn([
+    $this->siteScanner->shouldReceive('scanSites')->andReturn([
         [
             'name' => 'mysite',
             'domain' => 'mysite.test',
@@ -57,7 +57,7 @@ it('generates php caddyfile with document roots', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn(['~/Projects']);
 
-    $this->siteScanner->shouldReceive('scan')->andReturn([
+    $this->siteScanner->shouldReceive('scanSites')->andReturn([
         [
             'name' => 'mysite',
             'domain' => 'mysite.test',
@@ -82,7 +82,7 @@ it('generates empty caddyfile when no sites exist', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn([]);
 
-    $this->siteScanner->shouldReceive('scan')->andReturn([]);
+    $this->siteScanner->shouldReceive('scanSites')->andReturn([]);
 
     $generator = new CaddyfileGenerator($this->configManager, $this->siteScanner);
     $generator->generate();

@@ -28,7 +28,7 @@ class CaddyfileGenerator
 
     protected function generateCaddyfile(): void
     {
-        $sites = $this->siteScanner->scan();
+        $sites = $this->siteScanner->scanSites();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
         $defaultPhpContainer = $this->getContainerName($defaultPhp);
 
@@ -70,7 +70,7 @@ class CaddyfileGenerator
 
     protected function generatePhpCaddyfile(): void
     {
-        $sites = $this->siteScanner->scan();
+        $sites = $this->siteScanner->scanSites();
         $paths = $this->configManager->getPaths();
 
         $caddyfile = '{

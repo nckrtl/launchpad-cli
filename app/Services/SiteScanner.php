@@ -6,11 +6,18 @@ use Illuminate\Support\Facades\File;
 
 class SiteScanner
 {
-    public function __construct(protected ConfigManager $configManager) {}
+    public function __construct(
+        protected ConfigManager $configManager,
+        protected DatabaseService $databaseService
+    ) {}
 
+    /**
+     * Scan all directories in configured paths.
+     * Returns ALL directories as projects, with has_public_folder flag.
+     */
     public function scan(): array
     {
-        $sites = [];
+        $projects = [];
         $paths = $this->configManager->getPaths();
         $tld = $this->configManager->getTld();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
@@ -24,21 +31,30 @@ class SiteScanner
 
                 if (File::isDirectory($customPath)) {
                     $seenNames[$name] = true;
-                    $phpVersion = $this->detectPhpVersion($customPath, $name, $siteOverrides, $defaultPhp);
+                    $hasPublicFolder = File::isDirectory($customPath . '/public');
+                    $phpVersion = $this->detectPhpVersion($customPath, $name, $defaultPhp);
 
-                    $sites[] = [
+                    $project = [
                         'name' => $name,
-                        'domain' => "{$name}.{$tld}",
                         'path' => $customPath,
+                        'has_public_folder' => $hasPublicFolder,
                         'php_version' => $phpVersion,
                         'has_custom_php' => $phpVersion !== $defaultPhp,
-                        'secure' => true,
                     ];
+
+                    // Only add site info if has public folder
+                    if ($hasPublicFolder) {
+                        $project['domain'] = "{$name}.{$tld}";
+                        $project['site_url'] = "https://{$name}.{$tld}";
+                        $project['secure'] = true;
+                    }
+
+                    $projects[] = $project;
                 }
             }
         }
 
-        // Then scan configured paths for auto-discovered sites
+        // Then scan configured paths for auto-discovered projects (ALL directories)
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
 
@@ -51,11 +67,6 @@ class SiteScanner
             foreach ($directories as $directory) {
                 $name = basename((string) $directory);
 
-                // Skip projects without a public folder (not web apps)
-                if (! File::isDirectory($directory.'/public')) {
-                    continue;
-                }
-
                 // Skip if we've already seen this name (custom sites take precedence)
                 if (isset($seenNames[$name])) {
                     continue;
@@ -63,29 +74,45 @@ class SiteScanner
 
                 $seenNames[$name] = true;
 
-                // Determine PHP version: .php-version file > config override > default
-                $phpVersion = $this->detectPhpVersion($directory, $name, $siteOverrides, $defaultPhp);
+                $hasPublicFolder = File::isDirectory($directory . '/public');
+                $phpVersion = $this->detectPhpVersion($directory, $name, $defaultPhp);
 
-                $sites[] = [
+                $project = [
                     'name' => $name,
-                    'domain' => "{$name}.{$tld}",
                     'path' => $directory,
+                    'has_public_folder' => $hasPublicFolder,
                     'php_version' => $phpVersion,
                     'has_custom_php' => $phpVersion !== $defaultPhp,
-                    'secure' => true,
                 ];
+
+                // Only add site info if has public folder
+                if ($hasPublicFolder) {
+                    $project['domain'] = "{$name}.{$tld}";
+                    $project['site_url'] = "https://{$name}.{$tld}";
+                    $project['secure'] = true;
+                }
+
+                $projects[] = $project;
             }
         }
 
-        usort($sites, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
+        usort($projects, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
-        return $sites;
+        return $projects;
     }
 
-    protected function detectPhpVersion(string $directory, string $name, array $overrides, string $default): string
+    /**
+     * Get only sites (projects with public folder) for Caddyfile generation.
+     */
+    public function scanSites(): array
+    {
+        return array_filter($this->scan(), fn ($p) => $p['has_public_folder']);
+    }
+
+    protected function detectPhpVersion(string $directory, string $name, string $default): string
     {
         // Check for .php-version file first
-        $phpVersionFile = $directory.'/.php-version';
+        $phpVersionFile = $directory . '/.php-version';
         if (File::exists($phpVersionFile)) {
             $version = trim(File::get($phpVersionFile));
             if ($this->isValidPhpVersion($version)) {
@@ -93,7 +120,19 @@ class SiteScanner
             }
         }
 
-        return $overrides[$name]['php_version'] ?? $default;
+        // Check database override
+        $dbVersion = $this->databaseService->getPhpVersion($name);
+        if ($dbVersion !== null) {
+            return $dbVersion;
+        }
+
+        // Check config override (legacy, will be migrated)
+        $configVersion = $this->configManager->getSitePhpVersion($name);
+        if ($configVersion !== null) {
+            return $configVersion;
+        }
+
+        return $default;
     }
 
     protected function isValidPhpVersion(string $version): bool
@@ -104,7 +143,7 @@ class SiteScanner
     protected function expandPath(string $path): string
     {
         if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'].substr($path, 1);
+            return $_SERVER['HOME'] . substr($path, 1);
         }
 
         return $path;
@@ -112,14 +151,19 @@ class SiteScanner
 
     public function findSite(string $name): ?array
     {
-        $sites = $this->scan();
+        $projects = $this->scan();
 
-        foreach ($sites as $site) {
-            if ($site['name'] === $name) {
-                return $site;
+        foreach ($projects as $project) {
+            if ($project['name'] === $name) {
+                return $project;
             }
         }
 
         return null;
+    }
+
+    public function findProject(string $name): ?array
+    {
+        return $this->findSite($name);
     }
 }

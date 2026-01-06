@@ -61,7 +61,9 @@ Make sure `~/.local/bin` is in your PATH.
 | `launchpad upgrade` | Upgrade to the latest version |
 | `launchpad rebuild` | Rebuild PHP images with Redis and other extensions |
 | `launchpad upgrade --check` | Check for available updates |
-| `launchpad rebuild` | Rebuild PHP images with Redis and other extensions |
+| `launchpad worktrees` | List all git worktrees |
+| `launchpad worktree:refresh` | Auto-detect and link new worktrees |
+| `launchpad worktree:unlink <site> <wt>` | Remove worktree routing |
 
 ## Services & Ports
 
@@ -121,6 +123,24 @@ Change the top-level domain (default: `test`):
 }
 ```
 
+
+## Git Worktree Support
+
+Launchpad automatically detects git worktrees and creates subdomains:
+
+```bash
+# Create a worktree for your project
+cd ~/projects/myapp
+git worktree add ../myapp-feature-auth feature/auth
+
+# Refresh to pick up the new worktree
+launchpad worktree:refresh
+
+# Access via subdomain
+# https://feature-auth.myapp.test
+```
+
+Worktrees are served from `<worktree-name>.<site>.test`.
 
 ## Requirements
 

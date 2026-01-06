@@ -6,6 +6,7 @@ use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
+use App\Services\DatabaseService;
 use App\Services\SiteScanner;
 use LaravelZero\Framework\Commands\Command;
 
@@ -26,13 +27,14 @@ class PhpCommand extends Command
     public function handle(
         ConfigManager $configManager,
         SiteScanner $siteScanner,
-        CaddyfileGenerator $caddyfileGenerator
+        CaddyfileGenerator $caddyfileGenerator,
+        DatabaseService $databaseService
     ): int {
         $site = $this->argument('site');
         $version = $this->argument('version');
         $reset = $this->option('reset');
 
-        // Verify site exists
+        // Verify site exists (now includes all directories)
         $siteInfo = $siteScanner->findSite($site);
         if (! $siteInfo) {
             if ($this->wantsJson()) {
@@ -47,17 +49,24 @@ class PhpCommand extends Command
         }
 
         if ($reset) {
+            // Remove from database
+            $databaseService->removeProjectOverride($site);
+            // Also remove from config (legacy cleanup)
             $configManager->removeSiteOverride($site);
+            
             $newVersion = $configManager->getDefaultPhpVersion();
 
-            $this->regenerateAndReload($caddyfileGenerator);
+            // Only regenerate Caddyfile if site has public folder
+            if ($siteInfo['has_public_folder']) {
+                $this->regenerateAndReload($caddyfileGenerator);
+            }
 
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
                     'site' => $site,
                     'php_version' => $newVersion,
                     'action' => 'reset',
-                    'reloaded' => true,
+                    'reloaded' => $siteInfo['has_public_folder'],
                 ]);
             }
 
@@ -90,8 +99,14 @@ class PhpCommand extends Command
             return ExitCode::InvalidArguments->value;
         }
 
-        $configManager->setSitePhpVersion($site, $version);
-        $reloaded = $this->regenerateAndReload($caddyfileGenerator);
+        // Save to database (new way)
+        $databaseService->setProjectPhpVersion($site, $siteInfo['path'], $version);
+        
+        // Only regenerate Caddyfile if site has public folder
+        $reloaded = false;
+        if ($siteInfo['has_public_folder']) {
+            $reloaded = $this->regenerateAndReload($caddyfileGenerator);
+        }
 
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
@@ -106,7 +121,7 @@ class PhpCommand extends Command
 
         if ($reloaded) {
             $this->info('Caddy reloaded');
-        } else {
+        } elseif ($siteInfo['has_public_folder']) {
             $this->warn('Could not reload Caddy. You may need to restart Launchpad.');
         }
 

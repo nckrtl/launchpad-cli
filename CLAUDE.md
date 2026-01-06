@@ -26,8 +26,11 @@ app/
 │   ├── PhpCommand.php        # Set PHP version per site
 │   ├── LogsCommand.php       # View service logs
 │   ├── TrustCommand.php      # Trust the local CA certificate
-│   └── UpgradeCommand.php    # Self-update to latest version
-    └── RebuildCommand.php       # Rebuild PHP images with extensions
+│   ├── UpgradeCommand.php       # Self-update to latest version
+│   ├── RebuildCommand.php       # Rebuild PHP images with extensions
+│   ├── WorktreesCommand.php     # List git worktrees with subdomains
+│   ├── WorktreeRefreshCommand.php # Refresh/auto-link worktrees
+│   └── WorktreeUnlinkCommand.php  # Unlink worktree from site
 ├── Concerns/
 │   └── WithJsonOutput.php    # Trait for JSON output support
 ├── Enums/
@@ -39,7 +42,8 @@ app/
     ├── ConfigManager.php        # Manages user configuration
     ├── DockerManager.php        # Docker container operations
     ├── PhpComposeGenerator.php  # Generates PHP docker-compose
-    └── SiteScanner.php          # Scans paths for PHP projects
+    ├── SiteScanner.php          # Scans paths for PHP projects
+    └── WorktreeService.php      # Git worktree management
 ```
 
 ## Commands
@@ -60,6 +64,9 @@ All commands support `--json` flag for machine-readable output.
 | `launchpad trust` | Trust the local CA certificate |
 | `launchpad upgrade` | Upgrade to the latest version |
 | `launchpad upgrade --check` | Check for available updates |
+| `launchpad worktrees [site]` | List git worktrees with subdomains |
+| `launchpad worktree:refresh` | Refresh and auto-link new worktrees |
+| `launchpad worktree:unlink <site> <worktree>` | Unlink worktree from site |
 
 ## JSON Output Format
 
@@ -128,6 +135,14 @@ All commands with `--json` flag return structured JSON:
   }
 }
 ```
+
+## Git Worktree Support
+
+Launchpad automatically detects git worktrees and creates subdomains for them:
+
+- Worktrees are accessible via `<worktree>.<site>.test` (e.g., `feature-auth.myapp.test`)
+- Run `worktree:refresh` after creating new worktrees to update Caddy routing
+- Worktrees inherit the parent site's PHP version
 
 ## Exit Codes
 
