@@ -109,13 +109,6 @@ final class ProvisionCommand extends Command
                 }
             }
 
-            // Early Caddy reload: Makes URL accessible immediately and starts SSL cert generation
-            // This happens in parallel with the rest of setup
-            $this->info("Early Caddy reload (making {$this->slug}.ccc accessible)...");
-            $caddyfileGenerator->generate();
-            $caddyfileGenerator->reload();
-            $caddyfileGenerator->reloadPhp();
-
             // Step 3: Run setup (composer, npm, env, etc.)
             $this->broadcast('setting_up');
             $this->runSetup();
@@ -135,7 +128,13 @@ final class ProvisionCommand extends Command
             // (Caddy reload disconnects WebSocket clients temporarily)
             $this->broadcast('ready');
 
-            // Note: Caddy was already reloaded early (after clone) to make URL accessible immediately
+            // Step 5: Regenerate Caddy config and reload (after broadcasting ready)
+            $this->info('Regenerating Caddy configuration...');
+            $caddyfileGenerator->generate();
+            $caddyfileGenerator->reload();
+            $caddyfileGenerator->reloadPhp();
+            $this->info('Caddy reloaded');
+
             $this->info("Project {$this->slug} provisioned successfully!");
 
             return 0;
