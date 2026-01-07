@@ -16,13 +16,13 @@ class PhpCommand extends Command
 
     protected $signature = 'php
         {site : The site name to configure}
-        {version? : The PHP version to use (8.3, 8.4)}
+        {version? : The PHP version to use (8.3, 8.4, 8.5)}
         {--reset : Reset to default PHP version}
         {--json : Output as JSON}';
 
     protected $description = 'Set PHP version for a site';
 
-    protected array $validVersions = ['8.3', '8.4'];
+    protected array $validVersions = ['8.3', '8.4', '8.5'];
 
     public function handle(
         ConfigManager $configManager,

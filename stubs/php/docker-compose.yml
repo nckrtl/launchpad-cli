@@ -29,6 +29,21 @@ services:
     networks:
       - launchpad
 
+  php-85:
+    build:
+      context: .
+      dockerfile: Dockerfile.php85
+    image: launchpad-php:8.5
+    container_name: launchpad-php-85
+    ports:
+      - "8085:8080"
+    volumes:
+      - ./php.ini:/usr/local/etc/php/php.ini:ro
+      - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
+    restart: unless-stopped
+    networks:
+      - launchpad
+
 networks:
   launchpad:
     external: true

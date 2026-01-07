@@ -23,7 +23,7 @@ final class ProjectScanCommand extends Command
 
     public function handle(ConfigManager $config): int
     {
-        /** @var string|null $path */
+        /** @var string|null $specificPath */
         $specificPath = $this->argument('path');
         $depth = (int) $this->option('depth');
 
@@ -127,7 +127,7 @@ final class ProjectScanCommand extends Command
         return $projects;
     }
 
-    private function extractProjectInfo(string $path): ?array
+    private function extractProjectInfo(string $path): array
     {
         $name = basename($path);
         $githubUrl = null;

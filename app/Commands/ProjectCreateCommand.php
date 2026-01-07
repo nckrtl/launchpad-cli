@@ -20,6 +20,10 @@ final class ProjectCreateCommand extends Command
         {--clone= : Clone existing repository (user/repo or git URL)}
         {--visibility=private : Repository visibility (private/public)}
         {--path= : Override default project path}
+        {--db-driver= : Database driver (sqlite, pgsql)}
+        {--session-driver= : Session driver (file, database, redis)}
+        {--cache-driver= : Cache driver (file, database, redis)}
+        {--queue-driver= : Queue driver (sync, database, redis)}
         {--json : Output as JSON}';
 
     protected $description = 'Create a new project (starts provisioning in background)';
@@ -73,9 +77,6 @@ final class ProjectCreateCommand extends Command
         $launchpadBin = realpath($_SERVER['argv'][0]) ?: '/home/launchpad/projects/launchpad-cli/launchpad';
         $provisionCmd = "HOME={$_SERVER['HOME']} {$launchpadBin} provision ".escapeshellarg($slug);
 
-        if ($githubRepo) {
-            $provisionCmd .= ' --github-repo='.escapeshellarg($githubRepo);
-        }
         if ($template) {
             $provisionCmd .= ' --template='.escapeshellarg($template);
         }
@@ -83,6 +84,20 @@ final class ProjectCreateCommand extends Command
             $provisionCmd .= ' --clone-url='.escapeshellarg($cloneUrl);
         }
         $provisionCmd .= ' --visibility='.escapeshellarg($visibility);
+
+        // Pass driver options if provided
+        if ($dbDriver = $this->option('db-driver')) {
+            $provisionCmd .= ' --db-driver='.escapeshellarg($dbDriver);
+        }
+        if ($sessionDriver = $this->option('session-driver')) {
+            $provisionCmd .= ' --session-driver='.escapeshellarg($sessionDriver);
+        }
+        if ($cacheDriver = $this->option('cache-driver')) {
+            $provisionCmd .= ' --cache-driver='.escapeshellarg($cacheDriver);
+        }
+        if ($queueDriver = $this->option('queue-driver')) {
+            $provisionCmd .= ' --queue-driver='.escapeshellarg($queueDriver);
+        }
 
         // Step 3: Start background process (fully detached from SSH session)
         $logFile = "/tmp/provision-{$slug}.log";

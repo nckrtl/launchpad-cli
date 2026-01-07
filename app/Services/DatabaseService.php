@@ -18,7 +18,7 @@ class DatabaseService
 
     protected function getDbPath(): string
     {
-        $home = $_SERVER['HOME'] ?? getenv('HOME') ?? '/tmp';
+        $home = $_SERVER['HOME'] ?? getenv('HOME') ?: '/tmp';
 
         return "{$home}/.config/launchpad/database.sqlite";
     }
