@@ -198,7 +198,9 @@ class CaddyfileGenerator
         $result83 = Process::run('docker exec launchpad-php-83 frankenphp reload --config /etc/frankenphp/Caddyfile 2>/dev/null');
         $result84 = Process::run('docker exec launchpad-php-84 frankenphp reload --config /etc/frankenphp/Caddyfile 2>/dev/null');
 
-        return $result83->successful() || $result84->successful();
+        $result85 = Process::run('docker exec launchpad-php-85 frankenphp reload --config /etc/frankenphp/Caddyfile 2>/dev/null');
+
+        return $result83->successful() || $result84->successful() || $result85->successful();
     }
 
     protected function getContainerName(string $version): string

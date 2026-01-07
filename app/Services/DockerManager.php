@@ -146,6 +146,26 @@ class DockerManager
         return ! empty(trim($result->output()));
     }
 
+    /**
+     * Get the health status of a container.
+     *
+     * @return string|null 'healthy', 'unhealthy', 'starting', or null if no healthcheck
+     */
+    public function getHealthStatus(string $container): ?string
+    {
+        $result = Process::run(
+            "docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' {$container} 2>/dev/null"
+        );
+
+        if (! $result->successful()) {
+            return null;
+        }
+
+        $status = trim($result->output());
+
+        return $status === 'none' ? null : $status;
+    }
+
     protected function getComposePath(string $service): string
     {
         return "{$this->basePath}/{$service}/docker-compose.yml";

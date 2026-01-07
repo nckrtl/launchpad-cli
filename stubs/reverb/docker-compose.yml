@@ -18,6 +18,12 @@ services:
     restart: unless-stopped
     networks:
       - launchpad
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"\\$s=@fsockopen('127.0.0.1',6001);if(!\\$s)exit(1);fclose(\\$s);\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 networks:
   launchpad:

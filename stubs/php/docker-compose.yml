@@ -13,6 +13,12 @@ services:
     restart: unless-stopped
     networks:
       - launchpad
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   php-84:
     build:
@@ -28,6 +34,12 @@ services:
     restart: unless-stopped
     networks:
       - launchpad
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   php-85:
     build:
@@ -43,6 +55,12 @@ services:
     restart: unless-stopped
     networks:
       - launchpad
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 networks:
   launchpad:

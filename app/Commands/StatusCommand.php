@@ -33,15 +33,23 @@ class StatusCommand extends Command
     ): int {
         $services = [];
         $runningCount = 0;
+        $healthyCount = 0;
 
         foreach ($this->containers as $name => $container) {
             $isRunning = $dockerManager->isRunning($container);
+            $health = $isRunning ? $dockerManager->getHealthStatus($container) : null;
+
             $services[$name] = [
                 'status' => $isRunning ? 'running' : 'stopped',
+                'health' => $health,
                 'container' => $container,
             ];
+
             if ($isRunning) {
                 $runningCount++;
+                if ($health === 'healthy') {
+                    $healthyCount++;
+                }
             }
         }
 
@@ -53,6 +61,7 @@ class StatusCommand extends Command
                 'running' => $isRunning,
                 'services' => $services,
                 'services_running' => $runningCount,
+                'services_healthy' => $healthyCount,
                 'services_total' => count($this->containers),
                 'sites_count' => count($sites),
                 'config_path' => $configManager->getConfigPath(),
@@ -74,10 +83,9 @@ class StatusCommand extends Command
         $this->line('  <fg=cyan>Services:</>');
 
         foreach ($services as $name => $info) {
-            $status = $info['status'] === 'running'
-                ? '<fg=green>●</>'
-                : '<fg=red>○</>';
-            $this->line("    {$status} {$name}");
+            $statusIcon = $this->getStatusIcon($info['status'], $info['health']);
+            $healthLabel = $this->getHealthLabel($info['health']);
+            $this->line("    {$statusIcon} {$name}{$healthLabel}");
         }
 
         $this->newLine();
@@ -88,5 +96,29 @@ class StatusCommand extends Command
         $this->newLine();
 
         return self::SUCCESS;
+    }
+
+    protected function getStatusIcon(string $status, ?string $health): string
+    {
+        if ($status !== 'running') {
+            return '<fg=red>○</>';
+        }
+
+        return match ($health) {
+            'healthy' => '<fg=green>●</>',
+            'unhealthy' => '<fg=red>●</>',
+            'starting' => '<fg=yellow>●</>',
+            default => '<fg=green>●</>', // Running but no healthcheck
+        };
+    }
+
+    protected function getHealthLabel(?string $health): string
+    {
+        return match ($health) {
+            'healthy' => ' <fg=green>(healthy)</>',
+            'unhealthy' => ' <fg=red>(unhealthy)</>',
+            'starting' => ' <fg=yellow>(starting)</>',
+            default => '',
+        };
     }
 }

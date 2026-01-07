@@ -8,3 +8,4 @@ services:
     container_name: launchpad-dns
     network_mode: host
     restart: unless-stopped
+    # Note: healthcheck is defined in Dockerfile due to network_mode: host

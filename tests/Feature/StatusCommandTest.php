@@ -16,6 +16,7 @@ beforeEach(function () {
 
 it('shows status with all services running', function () {
     $this->dockerManager->shouldReceive('isRunning')->andReturn(true);
+    $this->dockerManager->shouldReceive('getHealthStatus')->andReturn('healthy');
     $this->siteScanner->shouldReceive('scan')->andReturn([
         ['name' => 'mysite', 'domain' => 'mysite.test', 'path' => '/path/to/mysite', 'php_version' => '8.3', 'has_custom_php' => false],
     ]);
@@ -42,6 +43,7 @@ it('shows status with all services stopped', function () {
 
 it('outputs json when --json flag is used', function () {
     $this->dockerManager->shouldReceive('isRunning')->andReturn(true);
+    $this->dockerManager->shouldReceive('getHealthStatus')->andReturn('healthy');
     $this->siteScanner->shouldReceive('scan')->andReturn([]);
     $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/launchpad');
     $this->configManager->shouldReceive('getTld')->andReturn('test');

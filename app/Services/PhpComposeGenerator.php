@@ -20,6 +20,8 @@ class PhpComposeGenerator
         $worktreeMount = $this->generateWorktreeMount();
         $vibeKanbanMount = $this->generateVibeKanbanMount();
 
+        $healthcheck = $this->generateHealthcheck();
+
         $compose = "services:
   php-83:
     build:
@@ -35,7 +37,7 @@ class PhpComposeGenerator
     restart: unless-stopped
     networks:
       - launchpad
-
+{$healthcheck}
   php-84:
     build:
       context: .
@@ -50,7 +52,22 @@ class PhpComposeGenerator
     restart: unless-stopped
     networks:
       - launchpad
-
+{$healthcheck}
+  php-85:
+    build:
+      context: .
+      dockerfile: Dockerfile.php85
+    image: launchpad-php:8.5
+    container_name: launchpad-php-85
+    ports:
+      - \"8085:8080\"
+    volumes:
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}      - ./php.ini:/usr/local/etc/php/php.ini:ro
+      - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
+    restart: unless-stopped
+    networks:
+      - launchpad
+{$healthcheck}
 networks:
   launchpad:
     external: true
@@ -104,5 +121,17 @@ networks:
         }
 
         return $path;
+    }
+
+    protected function generateHealthcheck(): string
+    {
+        return '    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+';
     }
 }
