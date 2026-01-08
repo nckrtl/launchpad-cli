@@ -506,3 +506,83 @@ ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh my-te
 ```
 
 See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-provision/SKILL.md`
+
+## Troubleshooting Provisioning
+
+### Bun Install Hangs (Non-TTY Environments)
+
+**Problem:** Bun install hangs indefinitely on "Resolving dependencies" when running via SSH or in non-TTY environments.
+
+**Cause:** Bun's progress bar blocks on non-TTY terminals waiting for input that never comes.
+
+**Solution:** Always use `--no-progress` flag when running bun install in non-interactive contexts:
+
+```bash
+bun install --no-progress
+bun run build --silent
+```
+
+The ProvisionCommand has this fix built-in. If you see hangs, verify the flag is present:
+```bash
+grep 'no-progress' ~/projects/launchpad-cli/app/Commands/ProvisionCommand.php
+```
+
+### Bun Install Timeout (Peer Dependency Conflicts)
+
+**Problem:** Bun install times out after 180 seconds with peer dependency conflicts.
+
+**Solution:** The CLI automatically falls back to npm with `--legacy-peer-deps`:
+
+```php
+// In ProvisionCommand.php
+$npmResult = Process::path($this->projectPath)
+    ->timeout(600)
+    ->run('npm install --legacy-peer-deps 2>&1');
+```
+
+To test npm directly:
+```bash
+npm install --legacy-peer-deps
+```
+
+### Provisioning Takes > 30 Seconds
+
+If provisioning takes longer than 30 seconds with liftoff-starterkit, something is wrong. Common causes:
+
+1. **Bun hanging** - Check if `--no-progress` flag is missing
+2. **Network issues** - GitHub/npm registry slow
+3. **Large dependencies** - Template has unusually large npm dependencies
+
+Debug by running provision directly with timeout:
+```bash
+timeout 30 launchpad provision test-project --template=hardimpactdev/liftoff-starterkit --db-driver=pgsql --visibility=private 2>&1
+```
+
+### PostgreSQL Not Configured
+
+**Problem:** Project uses SQLite instead of PostgreSQL despite selecting pgsql in settings.
+
+**Cause:** Provisioning failed before `configureEnv()` ran (e.g., bun install hung).
+
+**Solution:** After fixing the provisioning issue, manually configure:
+```bash
+cd ~/projects/my-project
+sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env
+php artisan migrate:fresh
+```
+
+### SSH TTY vs Non-TTY Behavior
+
+Some commands behave differently in TTY vs non-TTY:
+- TTY (`ssh -t`): Interactive mode with progress bars
+- Non-TTY (regular ssh): Commands may hang waiting for TTY input
+
+Force TTY for debugging:
+```bash
+ssh -t launchpad@10.8.0.16 "cd ~/projects/test && bun install"
+```
+
+Non-TTY safe commands (what the CLI uses):
+```bash
+ssh launchpad@10.8.0.16 "cd ~/projects/test && bun install --no-progress"
+```
