@@ -116,6 +116,9 @@ class CaddyfileGenerator
             $caddyfile .= "    reverse_proxy @ws 172.18.0.1:5173\n";
             $caddyfile .= "\n";
 
+            // Use php_server without workers (classic mode) for robustness
+            // Each request bootstraps PHP fresh - slower but prevents cross-site pollution
+            // and handles broken projects gracefully
             $caddyfile .= "    php_server\n";
             $caddyfile .= "}\n\n";
         }
@@ -128,6 +131,7 @@ class CaddyfileGenerator
             $dockerPath = $this->getWorktreeDockerPath($worktree['path']);
             $root = $this->getDocumentRoot($dockerPath);
 
+            // Use php_server without workers for worktrees too
             $caddyfile .= "http://{$worktree['domain']}:8080 {
     root * {$root}
     php_server
