@@ -70,7 +70,7 @@ final class ProjectUpdateCommand extends Command
         try {
             // Step 1: Git pull (unless --no-git is set)
             if (! $this->option('no-git')) {
-                $this->info('Pulling latest changes...');
+                $this->log('Pulling latest changes...');
                 $gitResult = Process::path($path)->timeout(120)->run('git pull');
 
                 $results['steps']['git_pull'] = [
@@ -84,13 +84,13 @@ final class ProjectUpdateCommand extends Command
                     return $this->outputResult($results, false, 'Git pull failed');
                 }
             } else {
-                $this->info('Skipping git pull (rebuild mode)...');
+                $this->log('Skipping git pull (rebuild mode)...');
                 $results['steps']['git_pull'] = ['skipped' => true];
             }
 
             // Step 2: Composer install (if composer.json exists and --no-deps not set)
             if (! $this->option('no-deps') && file_exists("{$path}/composer.json")) {
-                $this->info('Installing Composer dependencies...');
+                $this->log('Installing Composer dependencies...');
                 $composerResult = Process::path($path)->timeout(300)->run('composer install --no-interaction');
 
                 $results['steps']['composer'] = [
@@ -105,7 +105,7 @@ final class ProjectUpdateCommand extends Command
             // Step 3: NPM/package manager install (if package.json exists and --no-deps not set)
             if (! $this->option('no-deps') && file_exists("{$path}/package.json")) {
                 $packageManager = $this->detectPackageManager($path);
-                $this->info("Installing dependencies with {$packageManager}...");
+                $this->log("Installing dependencies with {$packageManager}...");
 
                 $installCommand = $this->getInstallCommand($packageManager);
                 $installResult = Process::path($path)->timeout(600)->run($installCommand);
@@ -122,7 +122,7 @@ final class ProjectUpdateCommand extends Command
                 // Step 4: Build assets (if build script exists)
                 $packageJson = json_decode(file_get_contents("{$path}/package.json"), true);
                 if (isset($packageJson['scripts']['build'])) {
-                    $this->info("Building assets with {$packageManager}...");
+                    $this->log("Building assets with {$packageManager}...");
 
                     $buildCommand = $this->getBuildCommand($packageManager);
                     $buildResult = Process::path($path)->timeout(600)->run($buildCommand);
@@ -140,7 +140,7 @@ final class ProjectUpdateCommand extends Command
 
             // Step 5: Run migrations (if artisan exists and --no-migrate not set)
             if (! $this->option('no-migrate') && file_exists("{$path}/artisan")) {
-                $this->info('Running migrations...');
+                $this->log('Running migrations...');
                 $migrateResult = Process::path($path)->timeout(120)->run('php artisan migrate --force');
 
                 $results['steps']['migrate'] = [
@@ -160,6 +160,16 @@ final class ProjectUpdateCommand extends Command
 
         } catch (\Throwable $e) {
             return $this->failWithMessage($e->getMessage());
+        }
+    }
+
+    /**
+     * Log a message only if not in JSON mode.
+     */
+    private function log(string $message): void
+    {
+        if (! $this->wantsJson()) {
+            $this->info($message);
         }
     }
 
