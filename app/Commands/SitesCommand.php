@@ -26,6 +26,7 @@ class SitesCommand extends Command
                     'name' => $site['name'],
                     'display_name' => $site['display_name'] ?? ucwords(str_replace(['-', '_'], ' ', $site['name'])),
                     'github_repo' => $site['github_repo'] ?? null,
+                    'project_type' => $site['project_type'] ?? 'unknown',
                     'domain' => $site['domain'],
                     'path' => $site['path'],
                     'php_version' => $site['php_version'],

@@ -38,6 +38,7 @@ class SiteScanner
                         'name' => $name,
                         'display_name' => $this->getDisplayName($customPath, $name),
                         'github_repo' => $this->getGitHubRepo($customPath),
+                        'project_type' => $this->getProjectType($customPath),
                         'path' => $customPath,
                         'has_public_folder' => $hasPublicFolder,
                         'php_version' => $phpVersion,
@@ -83,6 +84,7 @@ class SiteScanner
                     'name' => $name,
                     'display_name' => $this->getDisplayName($directory, $name),
                     'github_repo' => $this->getGitHubRepo($directory),
+                    'project_type' => $this->getProjectType($directory),
                     'path' => $directory,
                     'has_public_folder' => $hasPublicFolder,
                     'php_version' => $phpVersion,
@@ -212,5 +214,48 @@ class SiteScanner
         }
 
         return null;
+    }
+
+    /**
+     * Detect the project type based on file structure.
+     */
+    protected function getProjectType(string $directory): string
+    {
+        $hasPublicFolder = File::isDirectory($directory.'/public');
+        $hasArtisan = File::exists($directory.'/artisan');
+        $composerJson = $directory.'/composer.json';
+
+        if (File::exists($composerJson)) {
+            $composer = json_decode(File::get($composerJson), true);
+
+            // Check if it is a Laravel package
+            $type = $composer['type'] ?? null;
+            if ($type === 'library' || $type === 'laravel-package') {
+                return 'laravel-package';
+            }
+
+            // Check for package indicators in composer.json
+            $extra = $composer['extra'] ?? [];
+            if (isset($extra['laravel']['providers']) || isset($extra['laravel']['aliases'])) {
+                return 'laravel-package';
+            }
+        }
+
+        // Laravel web application
+        if ($hasPublicFolder && $hasArtisan) {
+            return 'laravel-app';
+        }
+
+        // Laravel Zero or other CLI app
+        if ($hasArtisan) {
+            return 'cli';
+        }
+
+        // Generic PHP project with web interface
+        if ($hasPublicFolder) {
+            return 'web';
+        }
+
+        return 'unknown';
     }
 }
