@@ -211,18 +211,26 @@ final class ProvisionCommand extends Command
         // Step 2: Install JS dependencies (detect package manager from lockfile)
         if (file_exists("{$this->projectPath}/package.json")) {
             $home = $_SERVER['HOME'];
+            $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
+            $packageManager = 'npm'; // default
+
             if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
+                $packageManager = 'bun';
                 $this->broadcast('installing_npm');
                 $this->info('  Installing dependencies with Bun...');
-                $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
                 Process::path($this->projectPath)->timeout(600)->run("{$bunPath} install");
             } elseif (file_exists("{$this->projectPath}/pnpm-lock.yaml")) {
+                $packageManager = 'pnpm';
+                $this->broadcast('installing_npm');
                 $this->info('  Installing dependencies with pnpm...');
                 Process::path($this->projectPath)->timeout(600)->run('pnpm install');
             } elseif (file_exists("{$this->projectPath}/yarn.lock")) {
+                $packageManager = 'yarn';
+                $this->broadcast('installing_npm');
                 $this->info('  Installing dependencies with Yarn...');
                 Process::path($this->projectPath)->timeout(600)->run('yarn install');
             } else {
+                $this->broadcast('installing_npm');
                 $this->info('  Installing dependencies with npm...');
                 Process::path($this->projectPath)->timeout(600)->run('npm install');
             }
@@ -231,17 +239,22 @@ final class ProvisionCommand extends Command
             $this->broadcast('building');
             $packageJson = json_decode(file_get_contents("{$this->projectPath}/package.json"), true);
             if (isset($packageJson['scripts']['build'])) {
-                $this->info('  Building assets...');
-                $home = $_SERVER['HOME'];
-                $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
-                if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
-                    Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(600)->run("{$bunPath} run build 2>&1");
+                $this->info("  Building assets with {$packageManager}...");
+                $buildResult = match ($packageManager) {
+                    'bun' => Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(600)->run("{$bunPath} run build 2>&1"),
+                    'pnpm' => Process::path($this->projectPath)->timeout(600)->run('pnpm run build 2>&1'),
+                    'yarn' => Process::path($this->projectPath)->timeout(600)->run('yarn run build 2>&1'),
+                    default => Process::path($this->projectPath)->timeout(600)->run('npm run build 2>&1'),
+                };
+
+                if (! $buildResult->successful()) {
+                    $this->warn('  Asset build failed: '.$buildResult->output());
+                    // Continue provisioning - site will work but may have missing assets
                 } else {
-                    Process::path($this->projectPath)->timeout(600)->run('npm run build 2>&1');
+                    $this->info('  Assets built successfully');
                 }
             }
         }
-
         // Step 3: Copy .env and configure BEFORE running any Laravel commands
         if (file_exists("{$this->projectPath}/.env.example") && ! file_exists("{$this->projectPath}/.env")) {
             copy("{$this->projectPath}/.env.example", "{$this->projectPath}/.env");
