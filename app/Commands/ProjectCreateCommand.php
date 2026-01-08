@@ -88,6 +88,11 @@ final class ProjectCreateCommand extends Command
         }
         $provisionCmd .= ' --visibility='.escapeshellarg($visibility);
 
+        // Pass original name for APP_NAME (may differ from slug)
+        if ($name !== $slug) {
+            $provisionCmd .= ' --name='.escapeshellarg($name);
+        }
+
         // Pass PHP version if provided
         if ($phpVersion = $this->option('php')) {
             $provisionCmd .= ' --php='.escapeshellarg($phpVersion);

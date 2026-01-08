@@ -25,6 +25,7 @@ final class ProvisionCommand extends Command
         {--cache-driver= : Cache driver (file, database, redis)}
         {--queue-driver= : Queue driver (sync, database, redis)}
         {--minimal : Only run composer install, skip npm/build/env/migrations}
+        {--name= : Display name for APP_NAME (defaults to slug)}
         {--fork : Fork the repository instead of importing as new}';
 
     protected $description = 'Provision a project (create repo, clone, setup, register with orchestrator)';
@@ -514,7 +515,8 @@ final class ProvisionCommand extends Command
         $env = file_get_contents($envPath);
 
         // Configure APP_NAME and APP_URL with the project slug/domain
-        $env = $this->setEnvValue($env, 'APP_NAME', $this->slug);
+        $appName = $this->option('name') ?: $this->slug;
+        $env = $this->setEnvValue($env, 'APP_NAME', $appName);
 
         // Configure APP_URL
         $env = preg_replace('/^APP_URL=.*/m', "APP_URL=https://{$this->slug}.ccc", $env);
