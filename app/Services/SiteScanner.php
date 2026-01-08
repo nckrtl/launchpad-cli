@@ -36,6 +36,7 @@ class SiteScanner
 
                     $project = [
                         'name' => $name,
+                        'display_name' => $this->getDisplayName($customPath, $name),
                         'path' => $customPath,
                         'has_public_folder' => $hasPublicFolder,
                         'php_version' => $phpVersion,
@@ -79,6 +80,7 @@ class SiteScanner
 
                 $project = [
                     'name' => $name,
+                    'display_name' => $this->getDisplayName($directory, $name),
                     'path' => $directory,
                     'has_public_folder' => $hasPublicFolder,
                     'php_version' => $phpVersion,
@@ -168,5 +170,26 @@ class SiteScanner
     public function findProject(string $name): ?array
     {
         return $this->findSite($name);
+    }
+
+    /**
+     * Get display name for a project from .env APP_NAME or generate from slug.
+     */
+    protected function getDisplayName(string $directory, string $slug): string
+    {
+        // Try to read APP_NAME from .env file
+        $envPath = $directory.'/.env';
+        if (File::exists($envPath)) {
+            $envContent = File::get($envPath);
+            if (preg_match('/^APP_NAME=(.+)$/m', $envContent, $matches)) {
+                $appName = trim($matches[1], "\"' ");
+                if ($appName) {
+                    return $appName;
+                }
+            }
+        }
+
+        // Generate display name from slug: "my-cool-project" -> "My Cool Project"
+        return ucwords(str_replace(['-', '_'], ' ', $slug));
     }
 }

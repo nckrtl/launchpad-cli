@@ -24,6 +24,7 @@ class SitesCommand extends Command
             return $this->outputJsonSuccess([
                 'sites' => array_map(fn ($site) => [
                     'name' => $site['name'],
+                    'display_name' => $site['display_name'] ?? ucwords(str_replace(['-', '_'], ' ', $site['name'])),
                     'domain' => $site['domain'],
                     'path' => $site['path'],
                     'php_version' => $site['php_version'],
