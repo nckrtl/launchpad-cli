@@ -20,6 +20,7 @@ final class ProjectCreateCommand extends Command
         {--clone= : Clone existing repository (user/repo or git URL)}
         {--visibility=private : Repository visibility (private/public)}
         {--path= : Override default project path}
+        {--php= : PHP version to use (8.3, 8.4, 8.5)}
         {--db-driver= : Database driver (sqlite, pgsql)}
         {--session-driver= : Session driver (file, database, redis)}
         {--cache-driver= : Cache driver (file, database, redis)}
@@ -84,6 +85,11 @@ final class ProjectCreateCommand extends Command
             $provisionCmd .= ' --clone-url='.escapeshellarg($cloneUrl);
         }
         $provisionCmd .= ' --visibility='.escapeshellarg($visibility);
+
+        // Pass PHP version if provided
+        if ($phpVersion = $this->option('php')) {
+            $provisionCmd .= ' --php='.escapeshellarg($phpVersion);
+        }
 
         // Pass driver options if provided
         if ($dbDriver = $this->option('db-driver')) {

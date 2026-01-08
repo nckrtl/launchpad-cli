@@ -19,6 +19,7 @@ final class ProvisionCommand extends Command
         {--clone-url= : Existing repo URL to clone}
         {--template= : Template repository (user/repo format)}
         {--visibility=private : Repository visibility (private/public)}
+        {--php= : PHP version to use (8.3, 8.4, 8.5)}
         {--db-driver= : Database driver (sqlite, pgsql)}
         {--session-driver= : Session driver (file, database, redis)}
         {--cache-driver= : Cache driver (file, database, redis)}
@@ -297,7 +298,7 @@ final class ProvisionCommand extends Command
         $this->configureTrustedProxies();
 
         // Write PHP version file
-        $phpVersion = $this->detectPhpVersion();
+        $phpVersion = $this->getPhpVersion();
         file_put_contents("{$this->projectPath}/.php-version", "{$phpVersion}\n");
 
         $this->info('Setup completed');
@@ -426,7 +427,26 @@ final class ProvisionCommand extends Command
         }
     }
 
-    private function detectPhpVersion(): string
+    /**
+     * Get the PHP version to use for this project.
+     * Priority: --php option > composer.json detection > default (8.4)
+     */
+    private function getPhpVersion(): string
+    {
+        // Check if --php option was provided
+        $phpOption = $this->option('php');
+        if ($phpOption && in_array($phpOption, ['8.3', '8.4', '8.5'], true)) {
+            return $phpOption;
+        }
+
+        // Detect from composer.json
+        return $this->detectPhpVersionFromComposer();
+    }
+
+    /**
+     * Detect PHP version from composer.json requirements.
+     */
+    private function detectPhpVersionFromComposer(): string
     {
         $composerPath = "{$this->projectPath}/composer.json";
         if (! file_exists($composerPath)) {
@@ -442,6 +462,10 @@ final class ProvisionCommand extends Command
         $phpReq = $composer['require']['php'] ?? null;
 
         if ($phpReq && preg_match('/(\d+\.\d+)/', (string) $phpReq, $m)) {
+            // Check versions in descending order (highest first)
+            if (version_compare($m[1], '8.5', '>=')) {
+                return '8.5';
+            }
             if (version_compare($m[1], '8.4', '>=')) {
                 return '8.4';
             }
@@ -567,7 +591,7 @@ final class ProvisionCommand extends Command
      */
     private function restartPhpContainer(): void
     {
-        $phpVersion = $this->detectPhpVersion();
+        $phpVersion = $this->getPhpVersion();
         $container = "launchpad-php-{$phpVersion}";
 
         $this->info("  Restarting {$container} to clear cached state...");
