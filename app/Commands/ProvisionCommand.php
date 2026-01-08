@@ -221,6 +221,10 @@ final class ProvisionCommand extends Command
             if (file_exists("{$this->projectPath}/bun.lock") || file_exists("{$this->projectPath}/bun.lockb")) {
                 $packageManager = 'bun';
                 $this->broadcast('installing_npm');
+                // Remove GitHub Package Registry config to use npm instead
+                @unlink("{$this->projectPath}/bunfig.toml");
+                @unlink("{$this->projectPath}/bun.lock");
+                @unlink("{$this->projectPath}/bun.lockb");
                 $this->info('  Installing dependencies with Bun...');
                 Process::path($this->projectPath)->timeout(600)->run("{$bunPath} install");
             } elseif (file_exists("{$this->projectPath}/pnpm-lock.yaml")) {
