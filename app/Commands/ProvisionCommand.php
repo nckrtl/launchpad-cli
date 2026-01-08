@@ -445,36 +445,78 @@ final class ProvisionCommand extends Command
 
     /**
      * Detect PHP version from composer.json requirements.
+     * Always prefers the latest version unless explicitly excluded.
      */
     private function detectPhpVersionFromComposer(): string
     {
         $composerPath = "{$this->projectPath}/composer.json";
         if (! file_exists($composerPath)) {
-            return '8.4';
+            return '8.5'; // Default to latest
         }
 
         $content = file_get_contents($composerPath);
         if (! $content) {
-            return '8.4';
+            return '8.5';
         }
 
         $composer = json_decode($content, true);
-        $phpReq = $composer['require']['php'] ?? null;
+        $constraint = $composer['require']['php'] ?? null;
 
-        if ($phpReq && preg_match('/(\d+\.\d+)/', (string) $phpReq, $m)) {
-            // Check versions in descending order (highest first)
-            if (version_compare($m[1], '8.5', '>=')) {
-                return '8.5';
-            }
-            if (version_compare($m[1], '8.4', '>=')) {
-                return '8.4';
-            }
-            if (version_compare($m[1], '8.3', '>=')) {
-                return '8.3';
+        if (! $constraint) {
+            return '8.5';
+        }
+
+        return $this->getRecommendedPhpVersion($constraint);
+    }
+
+    /**
+     * Get the recommended (highest compatible) PHP version for a constraint.
+     * Always prefers the latest PHP version unless explicitly excluded.
+     *
+     * Examples:
+     * - ^8.3 → 8.5 (allows 8.3+)
+     * - ^8.4 → 8.5 (allows 8.4+)
+     * - ~8.3.0 → 8.3 (only allows 8.3.x)
+     * - 8.4.* → 8.4 (only allows 8.4.x)
+     * - <8.5 → 8.4 (excludes 8.5)
+     * - >=8.3 <8.5 → 8.4 (range excludes 8.5)
+     */
+    private function getRecommendedPhpVersion(string $constraint): string
+    {
+        $constraint = trim($constraint);
+        $availableVersions = ['8.5', '8.4', '8.3'];
+
+        // Check for explicit upper bound that excludes versions
+        // Patterns like: <8.5, <=8.4, <8.5.0
+        if (preg_match('/<\s*(\d+)\.(\d+)/', $constraint, $matches)) {
+            $maxMajor = (int) $matches[1];
+            $maxMinor = (int) $matches[2];
+
+            foreach ($availableVersions as $version) {
+                [$major, $minor] = explode('.', $version);
+                // Version must be strictly less than the upper bound
+                if ((int) $major < $maxMajor || ((int) $major === $maxMajor && (int) $minor < $maxMinor)) {
+                    return $version;
+                }
             }
         }
 
-        return '8.4';
+        // Check for tilde constraint ~8.x.y which locks to 8.x.*
+        // ~8.3.0 means >=8.3.0 <8.4.0
+        if (preg_match('/~\s*(\d+)\.(\d+)\./', $constraint, $matches)) {
+            return $matches[1].'.'.$matches[2];
+        }
+
+        // Check for wildcard constraint 8.x.* which locks to 8.x
+        if (preg_match('/(\d+)\.(\d+)\.\*/', $constraint, $matches)) {
+            return $matches[1].'.'.$matches[2];
+        }
+
+        // For caret (^), greater-than (>=, >), or simple version constraints,
+        // the latest version is compatible
+        // ^8.3 means >=8.3.0 <9.0.0, so 8.5 is fine
+        // >=8.3 means 8.3 or higher, so 8.5 is fine
+        return '8.5';
     }
 
     /**
