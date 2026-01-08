@@ -122,13 +122,17 @@ final class ProjectCreateCommand extends Command
             $provisionCmd .= ' --fork';
         }
 
-        // Step 3: Start background process using nohup with login shell
+        // Step 3: Start background process via at (only method that returns immediately over SSH)
         $logFile = "/tmp/provision-{$slug}.log";
+        $scriptFile = "/tmp/provision-{$slug}.sh";
 
-        // Use nohup with bash -l (login shell) to properly source ~/.profile
-        // This ensures PATH includes ~/.local/bin, ~/.bun/bin, etc.
-        $escapedCmd = str_replace("'", "'\\'\"'\"'", $provisionCmd);
-        exec("nohup bash -lc '{$escapedCmd}' < /dev/null > {$logFile} 2>&1 &");
+        // Write launcher script with explicit PATH (at runs with minimal env)
+        $pathExport = 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$HOME/.config/herd-lite/bin:/usr/local/bin:/usr/bin:/bin"';
+        file_put_contents($scriptFile, "#!/bin/bash\n{$pathExport}\n{$provisionCmd} > {$logFile} 2>&1\n");
+        chmod($scriptFile, 0755);
+
+        // Use at now - only method that fully detaches from PHP/SSH session
+        exec("echo {$scriptFile} | at now 2>/dev/null");
 
         // Only show info messages if not JSON mode
         if (! $this->wantsJson()) {
