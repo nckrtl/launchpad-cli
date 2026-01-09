@@ -44,6 +44,7 @@ class InitCommand extends Command
                 "{$configPath}/redis",
                 "{$configPath}/redis/data",
                 "{$configPath}/mailpit",
+                "{$configPath}/logs",
             ];
 
             foreach ($directories as $dir) {
@@ -76,17 +77,20 @@ class InitCommand extends Command
             return true;
         });
 
-        // 3. Generate initial Caddyfile
+        // 3. Install companion web app
+        $this->task('Installing companion web app', fn () => $this->installWebApp($configManager));
+
+        // 4. Generate initial Caddyfile
         $this->task('Generating Caddyfile', function () use ($caddyfileGenerator) {
             $caddyfileGenerator->generate();
 
             return true;
         });
 
-        // 4. Create docker network
+        // 5. Create docker network
         $this->task('Creating Docker network', $dockerManager->createNetwork(...));
 
-        // 5. Build DNS container
+        // 6. Build DNS container
         $this->task('Building DNS container', function () use ($dockerManager) {
             $result = $dockerManager->build('dns');
             if (! $result && $dockerManager->getLastError()) {
@@ -96,7 +100,7 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 6. Build PHP images (with Redis and other extensions)
+        // 7. Build PHP images (with Redis and other extensions)
         $this->task('Building PHP images (this may take a while)', function () use ($dockerManager) {
             $result = $dockerManager->build('php');
             if (! $result && $dockerManager->getLastError()) {
@@ -106,7 +110,7 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 7. Pull service images
+        // 8. Pull service images
         $this->task('Pulling Caddy image', function () use ($dockerManager) {
             $result = $dockerManager->pull('caddy');
             if (! $result && $dockerManager->getLastError()) {
@@ -143,12 +147,15 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 8. Install composer-link globally for package development
+        // 9. Install composer-link globally for package development
         $this->task('Installing composer-link plugin', function () {
             $result = Process::run('composer global config --no-plugins allow-plugins.sandersander/composer-link true && composer global require sandersander/composer-link --quiet');
 
             return $result->successful();
         });
+
+        // 10. Install cron job for ensure command
+        $this->task('Installing cron job', $this->installCronJob(...));
 
         $this->newLine();
         $this->warn('Point your DNS to 127.0.0.1:');
@@ -177,5 +184,171 @@ class InitCommand extends Command
             }
             File::copy($file->getPathname(), $destPath);
         }
+    }
+
+    protected function installWebApp(ConfigManager $configManager): bool
+    {
+        $sourcePath = base_path('web');
+        $destPath = $configManager->getWebAppPath();
+
+        // Check if source exists (in development or phar)
+        if (! File::isDirectory($sourcePath)) {
+            // Source not found - this might be a minimal CLI installation
+            return true;
+        }
+
+        // Copy web app files (excluding vendor, node_modules, .env)
+        $this->copyWebAppDirectory($sourcePath, $destPath);
+
+        // Generate .env file
+        $this->generateWebAppEnv($configManager);
+
+        // Run composer install
+        $result = Process::timeout(300)
+            ->path($destPath)
+            ->run('composer install --no-dev --no-interaction --optimize-autoloader');
+
+        return $result->successful();
+    }
+
+    protected function copyWebAppDirectory(string $source, string $destination): void
+    {
+        $excludeDirs = ['vendor', 'node_modules', '.git', 'storage/logs', 'storage/framework/cache', 'storage/framework/sessions', 'storage/framework/views'];
+        $excludeFiles = ['.env'];
+
+        File::ensureDirectoryExists($destination);
+
+        // Copy files recursively, excluding specified paths
+        $this->recursiveCopy($source, $destination, $excludeDirs, $excludeFiles);
+
+        // Ensure storage directories exist with proper permissions
+        $storageDirs = [
+            "{$destination}/storage/app",
+            "{$destination}/storage/framework/cache",
+            "{$destination}/storage/framework/sessions",
+            "{$destination}/storage/framework/views",
+            "{$destination}/storage/logs",
+            "{$destination}/bootstrap/cache",
+        ];
+
+        foreach ($storageDirs as $dir) {
+            File::ensureDirectoryExists($dir);
+            chmod($dir, 0775);
+        }
+    }
+
+    protected function recursiveCopy(string $source, string $destination, array $excludeDirs, array $excludeFiles, string $relativePath = ''): void
+    {
+        $items = File::files($source);
+        $directories = File::directories($source);
+
+        // Copy files
+        foreach ($items as $file) {
+            $filename = $file->getFilename();
+            if (in_array($filename, $excludeFiles)) {
+                continue;
+            }
+            File::copy($file->getPathname(), "{$destination}/{$filename}");
+        }
+
+        // Copy directories recursively
+        foreach ($directories as $dir) {
+            $dirname = basename((string) $dir);
+            $newRelativePath = $relativePath ? "{$relativePath}/{$dirname}" : $dirname;
+
+            // Skip excluded directories
+            $skip = false;
+            foreach ($excludeDirs as $excludeDir) {
+                if ($dirname === $excludeDir || str_starts_with($newRelativePath, (string) $excludeDir)) {
+                    $skip = true;
+                    break;
+                }
+            }
+
+            if ($skip) {
+                continue;
+            }
+
+            $newDest = "{$destination}/{$dirname}";
+            File::ensureDirectoryExists($newDest);
+            $this->recursiveCopy($dir, $newDest, $excludeDirs, $excludeFiles, $newRelativePath);
+        }
+    }
+
+    protected function generateWebAppEnv(ConfigManager $configManager): void
+    {
+        $webAppPath = $configManager->getWebAppPath();
+        $tld = $configManager->getTld();
+        $reverbConfig = $configManager->getReverbConfig();
+
+        // Generate a random app key
+        $appKey = 'base64:'.base64_encode(random_bytes(32));
+
+        $env = <<<ENV
+APP_NAME=Launchpad
+APP_ENV=production
+APP_KEY={$appKey}
+APP_DEBUG=false
+APP_URL=https://launchpad.{$tld}
+
+LOG_CHANNEL=single
+LOG_LEVEL=error
+
+# Stateless - no database needed
+DB_CONNECTION=null
+
+# Redis for everything
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# Queue via Redis
+QUEUE_CONNECTION=redis
+
+# Let Horizon track failed jobs in Redis
+QUEUE_FAILED_DRIVER=null
+
+# Cache and sessions via Redis
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+SESSION_LIFETIME=120
+
+# Broadcasting via Reverb
+BROADCAST_CONNECTION=reverb
+
+REVERB_APP_ID={$reverbConfig['app_id']}
+REVERB_APP_KEY={$reverbConfig['app_key']}
+REVERB_APP_SECRET={$reverbConfig['app_secret']}
+REVERB_HOST={$reverbConfig['host']}
+REVERB_PORT={$reverbConfig['port']}
+REVERB_SCHEME=https
+ENV;
+
+        File::put("{$webAppPath}/.env", $env);
+    }
+
+    protected function installCronJob(): bool
+    {
+        $launchpadBin = (getenv('HOME') ?: '/home/launchpad').'/.local/bin/launchpad';
+        $logPath = (getenv('HOME') ?: '/home/launchpad').'/.config/launchpad/logs/ensure.log';
+        $cronEntry = "* * * * * {$launchpadBin} ensure >> {$logPath} 2>&1";
+
+        // Get current crontab
+        $result = Process::run('crontab -l 2>/dev/null');
+        $currentCrontab = $result->successful() ? trim($result->output()) : '';
+
+        // Check if entry already exists
+        if (str_contains($currentCrontab, 'launchpad ensure')) {
+            return true;
+        }
+
+        // Add new entry
+        $newCrontab = $currentCrontab ? "{$currentCrontab}\n{$cronEntry}" : $cronEntry;
+
+        // Install new crontab
+        $result = Process::run("echo \"{$newCrontab}\" | crontab -");
+
+        return $result->successful();
     }
 }

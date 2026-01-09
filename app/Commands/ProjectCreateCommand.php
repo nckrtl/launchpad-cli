@@ -37,6 +37,11 @@ final class ProjectCreateCommand extends Command
         $name = $this->argument('name');
         $slug = Str::slug($name);
 
+        // Prevent reserved names
+        if (strtolower($slug) === 'launchpad') {
+            return $this->failWithMessage('The name "launchpad" is reserved for the system.');
+        }
+
         /** @var string|null $template */
         $template = $this->option('template');
         /** @var string|null $clone */

@@ -31,12 +31,24 @@ class CaddyfileGenerator
         $sites = $this->siteScanner->scanSites();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
         $defaultPhpContainer = $this->getContainerName($defaultPhp);
+        $tld = $this->configManager->get('tld') ?: 'test';
 
         $caddyfile = '{
     local_certs
 }
 
 ';
+
+        // Add launchpad management UI site
+        $webAppPath = $this->configManager->getWebAppPath();
+        if (is_dir($webAppPath)) {
+            $caddyfile .= "launchpad.{$tld} {
+    tls internal
+    reverse_proxy {$defaultPhpContainer}:8080
+}
+
+";
+        }
 
         // Generate explicit entry for each site (wildcard certs don't work in browsers)
         foreach ($sites as $site) {
@@ -67,7 +79,6 @@ class CaddyfileGenerator
 
         // Add Reverb WebSocket service if enabled
         if ($this->configManager->isServiceEnabled('reverb')) {
-            $tld = $this->configManager->get('tld') ?: 'test';
             $caddyfile .= "reverb.{$tld} {
     tls internal
     @websocket {
@@ -88,6 +99,7 @@ class CaddyfileGenerator
     {
         $sites = $this->siteScanner->scanSites();
         $paths = $this->configManager->getPaths();
+        $tld = $this->configManager->get('tld') ?: 'test';
 
         $caddyfile = '{
     frankenphp
@@ -96,6 +108,18 @@ class CaddyfileGenerator
 }
 
 ';
+
+        // Add launchpad management UI site
+        $webAppPath = $this->configManager->getWebAppPath();
+        if (is_dir($webAppPath)) {
+            // The web app is mounted at /launchpad-web inside the container
+            $caddyfile .= "http://launchpad.{$tld}:8080 {
+    root * /launchpad-web/public
+    php_server
+}
+
+";
+        }
 
         foreach ($sites as $site) {
             $dockerPath = $this->getDockerPath($site['path'], $paths);

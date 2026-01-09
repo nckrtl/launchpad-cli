@@ -15,6 +15,7 @@ beforeEach(function () {
 
     $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir);
     $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
+    $this->configManager->shouldReceive('getWebAppPath')->andReturn('');
     $this->configManager->shouldReceive('get')->andReturnUsing(function ($key, $default = null) {
         return $default;
     });

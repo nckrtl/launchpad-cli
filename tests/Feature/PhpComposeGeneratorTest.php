@@ -10,6 +10,7 @@ beforeEach(function () {
 
     $this->configManager = Mockery::mock(ConfigManager::class);
     $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir);
+    $this->configManager->shouldReceive('getWebAppPath')->andReturn('');
 });
 
 afterEach(function () {

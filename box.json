@@ -7,7 +7,8 @@
         "bootstrap",
         "config",
         "stubs",
-        "vendor"
+        "vendor",
+        "web"
     ],
     "files": [
         "composer.json"
@@ -17,6 +18,15 @@
     "compactors": [
         "KevinGH\\Box\\Compactor\\Php",
         "KevinGH\\Box\\Compactor\\Json"
+    ],
+    "blacklist": [
+        "web/vendor",
+        "web/node_modules",
+        "web/.env",
+        "web/storage/logs/*",
+        "web/storage/framework/cache/*",
+        "web/storage/framework/sessions/*",
+        "web/storage/framework/views/*"
     ],
     "check-requirements": false
 }

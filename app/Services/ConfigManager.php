@@ -21,6 +21,11 @@ class ConfigManager
         return (getenv('HOME') ?: '/home/launchpad').'/.config/launchpad';
     }
 
+    public function getWebAppPath(): string
+    {
+        return $this->getConfigPath().'/web';
+    }
+
     public function load(): void
     {
         if (File::exists($this->configPath)) {
