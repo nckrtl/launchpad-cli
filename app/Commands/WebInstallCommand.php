@@ -166,7 +166,7 @@ DB_CONNECTION=null
 
 # Redis for everything
 REDIS_CLIENT=phpredis
-REDIS_HOST=127.0.0.1
+REDIS_HOST=launchpad-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
