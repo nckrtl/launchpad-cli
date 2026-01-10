@@ -498,11 +498,13 @@ final class ProvisionCommand extends Command
                               ($_SERVER['HOME'] ?? '/home/launchpad').'/.local/bin:/usr/local/bin:/usr/bin:/bin',
                 ])
                 ->run('php artisan key:generate --force');
+            $this->info('  key:generate output: '.trim($keyResult->output()));
             if (! $keyResult->successful()) {
                 $error = trim($keyResult->errorOutput() ?: $keyResult->output());
                 throw new \RuntimeException("key:generate failed: {$error}");
             }
 
+            clearstatcache(true, "{$this->projectPath}/.env");
             // Verify APP_KEY was actually set
             $envContent = file_get_contents("{$this->projectPath}/.env");
             if (preg_match('|^APP_KEY=(.*)$|m', $envContent, $matches)) {
