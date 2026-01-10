@@ -413,14 +413,14 @@ final class ProvisionCommand extends Command
                     $bunResult = Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])
                         ->path($this->projectPath)
                         ->timeout(60)
-                        ->run("timeout 30 {$bunPath} install --no-progress 2>&1");
+                        ->run("{$bunPath} install 2>&1");
 
                     $bunSuccess = $bunResult->successful();
                     if (! $bunSuccess) {
                         $this->warn('  Bun install failed: '.substr($bunResult->output(), 0, 500));
                     }
                 } catch (\Illuminate\Process\Exceptions\ProcessTimedOutException) {
-                    $this->warn('  Bun install timed out after 180 seconds');
+                    $this->warn('  Bun install timed out after 60 seconds');
                 }
 
                 if (! $bunSuccess) {
@@ -457,15 +457,15 @@ final class ProvisionCommand extends Command
             if (isset($packageJson['scripts']['build'])) {
                 $this->info("  Building assets with {$packageManager}...");
                 $buildResult = match ($packageManager) {
-                    'bun' => Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(60)->run("timeout 30 {$bunPath} run --silent build 2>&1"),
+                    'bun' => Process::env(['PATH' => "{$home}/.bun/bin:".getenv('PATH')])->path($this->projectPath)->timeout(60)->run("{$bunPath} run build 2>&1"),
                     'pnpm' => Process::path($this->projectPath)->timeout(600)->run('pnpm run build 2>&1'),
                     'yarn' => Process::path($this->projectPath)->timeout(600)->run('yarn run build 2>&1'),
                     default => Process::path($this->projectPath)->timeout(600)->run('npm run build 2>&1'),
                 };
 
                 if (! $buildResult->successful()) {
-                    $this->warn('  Asset build failed: '.$buildResult->output());
-                    // Continue provisioning - site will work but may have missing assets
+                    $this->broadcast('failed', 'Asset build failed');
+                    throw new \RuntimeException('Asset build failed: '.substr($buildResult->output(), 0, 500));
                 } else {
                     $this->info('  Assets built successfully');
                 }
@@ -487,7 +487,16 @@ final class ProvisionCommand extends Command
         // Step 6: Generate Laravel key
         if (file_exists("{$this->projectPath}/artisan")) {
             $this->info('  Generating application key...');
-            Process::path($this->projectPath)->run('php artisan key:generate');
+            $keyResult = Process::path($this->projectPath)
+                ->env([
+                    'HOME' => $_SERVER['HOME'] ?? '/home/launchpad',
+                    'PATH' => ($_SERVER['HOME'] ?? '/home/launchpad').'/.config/herd-lite/bin:'.
+                              ($_SERVER['HOME'] ?? '/home/launchpad').'/.local/bin:/usr/local/bin:/usr/bin:/bin',
+                ])
+                ->run('php artisan key:generate --force');
+            if (! $keyResult->successful()) {
+                $this->warn('  Warning: key:generate may have failed');
+            }
         }
 
         // Step 7: Run migrations

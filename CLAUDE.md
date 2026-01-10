@@ -51,6 +51,7 @@ app/
     ├── ConfigManager.php        # Manages user configuration
     ├── DockerManager.php        # Docker container operations
     ├── PhpComposeGenerator.php  # Generates PHP docker-compose
+    ├── PlatformService.php      # OS/runtime detection, prerequisites
     ├── SiteScanner.php          # Scans paths for PHP projects
     ├── WorktreeService.php      # Git worktree management
     ├── DatabaseService.php      # SQLite for PHP overrides
@@ -266,13 +267,206 @@ The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring b
 
 | Container | Purpose |
 |-----------|---------|
-| `launchpad-dns` | Local DNS resolver |
+| `launchpad-dns` | Local DNS resolver (dnsmasq) |
 | `launchpad-php-83` | PHP 8.3 FPM |
 | `launchpad-php-84` | PHP 8.4 FPM |
 | `launchpad-caddy` | Web server |
 | `launchpad-postgres` | PostgreSQL database |
 | `launchpad-redis` | Redis cache |
 | `launchpad-mailpit` | Mail catcher |
+
+## Prerequisites
+
+### Required
+
+| Dependency | macOS | Linux |
+|------------|-------|-------|
+| PHP >= 8.2 | `php.new` or Homebrew | `php.new` or apt |
+| Docker | OrbStack (recommended) or Docker Desktop | docker.io |
+| Composer | Homebrew | apt |
+| Supervisor | Homebrew | apt (for Horizon queue worker) |
+
+### Optional
+
+| Dependency | Purpose | macOS | Linux |
+|------------|---------|-------|-------|
+| dig | DNS debugging | Built-in | `apt install dnsutils` |
+
+The `launchpad init` command will check for and offer to install missing prerequisites automatically.
+
+### Container Runtime (macOS)
+
+**OrbStack is recommended** over Docker Desktop for macOS:
+
+| Metric | OrbStack | Docker Desktop |
+|--------|----------|----------------|
+| Startup | 2 seconds | 20-30 seconds |
+| RAM usage | ~1GB | ~6GB |
+| File I/O | 2-10x faster | Baseline |
+
+OrbStack is a drop-in replacement - all `docker` commands work identically.
+
+```bash
+# Install OrbStack
+brew install orbstack
+
+# Migrate from Docker Desktop (optional)
+orb migrate docker
+```
+
+## DNS Configuration
+
+Launchpad uses a Docker container running dnsmasq to resolve custom TLD domains (e.g., `.test`, `.ccc`). The TLD is configurable in `config.json`.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  System DNS → 127.0.0.1 → Docker DNS Container              │
+│                              │                              │
+│                    ┌─────────┴─────────┐                    │
+│                    ↓                   ↓                    │
+│              .{tld} → HOST_IP    other → upstream DNS       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+The DNS container (`launchpad-dns`) runs with `network_mode: host` and executes:
+```bash
+dnsmasq -k --address=/.{TLD}/{HOST_IP}
+```
+
+### Why Docker DNS?
+
+Docker DNS handles **any TLD** without per-TLD configuration. This is important for:
+- Multiple environments (local `.test`, remote `.ccc`, etc.)
+- Changing TLD without reconfiguring DNS
+- Consistent setup across macOS and Linux
+
+Alternative approaches like dnsmasq on the host require manual `/etc/resolver/{tld}` files for each TLD.
+
+### macOS DNS Setup
+
+**Option A: System DNS (recommended for simplicity)**
+
+Point system DNS to 127.0.0.1:
+```bash
+# Via command line
+sudo networksetup -setdnsservers Wi-Fi 127.0.0.1
+
+# Or via System Settings
+# System Settings → Network → Wi-Fi → Details → DNS → Add 127.0.0.1
+```
+
+**Option B: Existing dnsmasq**
+
+If you already have dnsmasq configured for your TLD, Launchpad can use it. The init command will detect this and skip the Docker DNS container.
+
+Check if you have dnsmasq for your TLD:
+```bash
+# Check resolver file exists
+cat /etc/resolver/test
+
+# Check dnsmasq is running
+brew services list | grep dnsmasq
+```
+
+### Linux DNS Setup
+
+Linux requires additional configuration because `systemd-resolved` typically binds to port 53.
+
+**Step 1: Disable systemd-resolved's DNS stub listener**
+
+Create `/etc/systemd/resolved.conf.d/launchpad.conf`:
+```ini
+[Resolve]
+DNSStubListener=no
+```
+
+Then restart systemd-resolved:
+```bash
+sudo systemctl restart systemd-resolved
+```
+
+**Step 2: Configure /etc/resolv.conf**
+
+```bash
+# Point to localhost (where Docker DNS will listen)
+sudo sh -c 'echo "nameserver 127.0.0.1" > /etc/resolv.conf'
+sudo sh -c 'echo "nameserver 1.1.1.1" >> /etc/resolv.conf'
+```
+
+Note: On some systems, `/etc/resolv.conf` is managed by systemd-resolved or NetworkManager. You may need to configure those services instead.
+
+**Step 3: Verify**
+
+```bash
+# Check port 53 is free for Docker DNS
+sudo ss -tlnp | grep :53
+
+# After starting Launchpad, test resolution
+dig myproject.test @127.0.0.1
+```
+
+### DNS Troubleshooting
+
+**Port 53 already in use:**
+```bash
+# Find what's using port 53
+sudo lsof -i :53
+
+# Common culprits:
+# - systemd-resolved (disable DNSStubListener)
+# - existing dnsmasq (can coexist if configured for same TLD)
+# - other DNS software
+```
+
+**DNS not resolving:**
+```bash
+# Test Docker DNS directly
+dig myproject.test @127.0.0.1
+
+# Check DNS container is running
+docker ps | grep launchpad-dns
+
+# Check DNS container logs
+docker logs launchpad-dns
+
+# Verify system DNS points to 127.0.0.1
+cat /etc/resolv.conf        # Linux
+scutil --dns                 # macOS
+```
+
+**macOS: DNS works with dig but not browser:**
+```bash
+# Flush DNS cache
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
+```
+
+### Multi-Environment Setup
+
+Launchpad supports multiple environments with different TLDs:
+
+| Environment | TLD | HOST_IP | Use Case |
+|-------------|-----|---------|----------|
+| Local (Mac) | `.test` | `127.0.0.1` | Local development |
+| Remote Server | `.ccc` | `10.8.0.16` | Cloud dev environment |
+
+The Docker DNS container automatically handles any TLD configured in `config.json`. When connecting to a remote environment, the `McpClient` automatically resolves `.ccc` domains to the configured host.
+
+### Config Reference
+
+```json
+{
+  "tld": "test",
+  "host_ip": "127.0.0.1"
+}
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `tld` | `test` | Top-level domain for sites |
+| `host_ip` | `127.0.0.1` | IP address for TLD resolution |
 
 ## Development
 
@@ -586,3 +780,176 @@ Non-TTY safe commands (what the CLI uses):
 ```bash
 ssh launchpad@10.8.0.16 "cd ~/projects/test && bun install --no-progress"
 ```
+
+## Launchpad Web App & Queue Processing
+
+The CLI includes a Laravel web app (`~/.config/launchpad/web/`) that provides an API for project management and uses Horizon for queue processing.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Desktop App / API Client                                               │
+│           │                                                             │
+│           ▼                                                             │
+│  ┌─────────────────────┐     ┌─────────────────────┐                    │
+│  │ Launchpad Web App   │     │  launchpad-redis    │                    │
+│  │ (FrankenPHP/Docker) │────▶│  (Docker container) │                    │
+│  │ REDIS_HOST=         │     │                     │                    │
+│  │ launchpad-redis     │     └──────────┬──────────┘                    │
+│  └─────────────────────┘                │                               │
+│                                         │ 127.0.0.1:6379                │
+│                                         ▼                               │
+│                           ┌─────────────────────────┐                   │
+│                           │  Horizon (on host)      │                   │
+│                           │  REDIS_HOST=127.0.0.1   │                   │
+│                           │         │               │                   │
+│                           │         ▼               │                   │
+│                           │  launchpad provision    │                   │
+│                           └─────────────────────────┘                   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Concepts
+
+- **Web App (in Docker)**: Accepts API requests, dispatches jobs to Redis queue
+- **Redis Container**: Shared queue storage, accessible as `launchpad-redis` from containers
+- **Horizon (on host)**: Picks up jobs from Redis, runs CLI commands like `launchpad provision`
+- **Different REDIS_HOST**: Containers use `launchpad-redis`, host processes use `127.0.0.1`
+
+### Configuration Files
+
+**Web App .env** (`~/.config/launchpad/web/.env`):
+```bash
+QUEUE_CONNECTION=redis
+REDIS_HOST=launchpad-redis    # Docker network name (for web requests)
+LOG_LEVEL=debug
+```
+
+**Horizon Config** (`~/.config/launchpad/web/config/horizon.php`):
+```php
+timeout => 900,  // 15 minutes for long-running provision jobs
+```
+
+**CreateProjectJob PATH** (`~/.config/launchpad/web/app/Jobs/CreateProjectJob.php`):
+```php
+->env([
+    HOME => $_SERVER[HOME] ?? /home/launchpad,
+    PATH => ($_SERVER[HOME] ?? /home/launchpad) . /.bun/bin: .
+              ($_SERVER[HOME] ?? /home/launchpad) . /.local/bin: .
+              ($_SERVER[HOME] ?? /home/launchpad) . /.config/herd-lite/bin: .
+              /usr/local/bin:/usr/bin:/bin,
+])
+```
+
+Note: `.bun/bin` must be in PATH for `bun install` to work during provisioning.
+
+### Supervisord Configuration
+
+Horizon is managed by supervisord for persistence and auto-restart:
+
+**Launchpad Horizon** (`/etc/supervisor/conf.d/launchpad-horizon.conf`):
+```ini
+[program:launchpad-horizon]
+process_name=%(program_name)s
+command=php /home/launchpad/.config/launchpad/web/artisan horizon
+autostart=true
+autorestart=true
+user=launchpad
+environment=HOME="/home/launchpad",REDIS_HOST="127.0.0.1",PATH="/home/launchpad/.config/herd-lite/bin:/home/launchpad/.bun/bin:/home/launchpad/.local/bin:/usr/local/bin:/usr/bin:/bin"
+redirect_stderr=true
+stdout_logfile=/home/launchpad/.config/launchpad/web/storage/logs/supervisor-horizon.log
+stopwaitsecs=10
+```
+
+### Multiple Apps Sharing Redis
+
+Multiple Laravel apps can share the same Redis instance for Horizon. Each app uses a unique prefix based on APP_NAME:
+
+| App | APP_NAME | Horizon Prefix |
+|-----|----------|----------------|
+| Launchpad Web | `Launchpad` | `launchpad_horizon:` |
+| Foundry | `Foundry` | `foundry_horizon:` |
+
+**Foundry Horizon** (`/etc/supervisor/conf.d/foundry.conf`):
+```ini
+[program:foundry-horizon]
+process_name=%(program_name)s
+command=php /home/launchpad/projects/foundry/artisan horizon
+autostart=true
+autorestart=true
+user=launchpad
+environment=HOME="/home/launchpad",REDIS_HOST="127.0.0.1",PATH="/home/launchpad/.config/herd-lite/bin:/home/launchpad/.local/bin:/usr/local/bin:/usr/bin:/bin"
+redirect_stderr=true
+stdout_logfile=/home/launchpad/projects/foundry/storage/logs/supervisor-horizon.log
+stopwaitsecs=10
+```
+
+### Managing Horizon
+
+```bash
+# Check status of all supervised processes
+sudo supervisorctl status
+
+# Restart specific Horizon instance
+sudo supervisorctl restart launchpad-horizon
+sudo supervisorctl restart foundry-horizon
+
+# View logs
+tail -f ~/.config/launchpad/web/storage/logs/supervisor-horizon.log
+tail -f ~/projects/foundry/storage/logs/supervisor-horizon.log
+
+# Reload supervisor after config changes
+sudo supervisorctl reread
+sudo supervisorctl update
+```
+
+
+### API Endpoints (Web App)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/projects` | POST | Create new project (dispatches CreateProjectJob) |
+| `/api/projects` | GET | List all projects |
+| `/api/status` | GET | Get launchpad status |
+
+**Create Project Request:**
+```bash
+curl -sk https://launchpad.ccc/api/projects \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d '{"name":"my-project","template":"user/repo","db_driver":"pgsql","visibility":"private"}'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "status": "provisioning",
+  "slug": "my-project",
+  "message": "Project provisioning started."
+}
+```
+
+### Troubleshooting Queue Issues
+
+**Jobs not being processed:**
+```bash
+# Check if Horizon is running
+sudo supervisorctl status launchpad-horizon
+
+# Check Redis connectivity from host
+redis-cli -h 127.0.0.1 ping
+
+# Check pending jobs
+redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default
+```
+
+**Job fails with "command not found":**
+- Ensure PATH in supervisord config includes all required directories
+- Check that `.bun/bin`, `.local/bin`, and `.config/herd-lite/bin` are in PATH
+
+**Job fails with exit code 1:**
+- Check Laravel logs: `tail -f ~/.config/launchpad/web/storage/logs/laravel.log`
+- Run provision command directly to see full error output
+

@@ -18,6 +18,7 @@ final class ProjectDeleteCommand extends Command
 
     protected $signature = 'project:delete
         {slug? : Project slug to delete}
+        {--slug= : Project slug to delete (alternative)}
         {--id= : Project ID to delete (alternative to slug)}
         {--force : Skip confirmation prompt}
         {--delete-repo : Also delete the GitHub repository (irreversible)}
@@ -32,7 +33,7 @@ final class ProjectDeleteCommand extends Command
         McpClient $mcp,
     ): int {
         /** @var string|null $slug */
-        $slug = $this->argument('slug');
+        $slug = $this->argument('slug') ?? $this->option('slug');
 
         /** @var string|null $id */
         $id = $this->option('id');
@@ -47,13 +48,6 @@ final class ProjectDeleteCommand extends Command
             return $this->failWithMessage('Project slug or --id is required');
         }
 
-        // Check if MCP/Orchestrator is configured
-        if (! $mcp->isConfigured()) {
-            return $this->failWithMessage(
-                'Orchestrator not configured. Cannot delete integrated projects.'
-            );
-        }
-
         // Confirmation prompt (unless --force)
         $force = (bool) $this->option('force');
         if (! $force && $this->input->isInteractive()) {
@@ -66,61 +60,96 @@ final class ProjectDeleteCommand extends Command
             }
         }
 
-        try {
-            // Call Orchestrator MCP to delete project
-            $result = $mcp->callTool('delete-project', [
-                'slug' => $slug,
-                'id' => $id ? (int) $id : null,
-                'confirm_slug' => $slug ?? $this->getSlugFromId($mcp, (int) $id),
-                'delete_github_repo' => (bool) $this->option('delete-repo'),
-            ]);
+        $meta = [];
+        $warnings = [];
 
-            $meta = $result['meta'] ?? [];
+        // Try to delete from orchestrator if configured (non-fatal if fails)
+        if ($mcp->isConfigured()) {
+            try {
+                $result = $mcp->callTool('delete-project', [
+                    'slug' => $slug,
+                    'id' => $id ? (int) $id : null,
+                    'confirm_slug' => $slug ?? $this->getSlugFromId($mcp, (int) $id),
+                    'delete_github_repo' => (bool) $this->option('delete-repo'),
+                ]);
+                $meta = $result['meta'] ?? [];
+                if (! $this->wantsJson()) {
+                    $this->info('Deleted from orchestrator');
+                }
+            } catch (\Throwable $e) {
+                $errorMsg = $e->getMessage();
+                // Truncate HTML error responses
+                if (str_contains($errorMsg, '<!DOCTYPE')) {
+                    $errorMsg = 'Orchestrator MCP endpoint returned 404';
+                }
+                $warnings[] = 'Orchestrator delete failed: '.$errorMsg;
+                if (! $this->wantsJson()) {
+                    $this->warn('Orchestrator delete failed (continuing with local delete)');
+                }
+            }
+        } else {
+            if (! $this->wantsJson()) {
+                $this->warn('Orchestrator not configured - skipping integration cleanup');
+            }
+        }
 
-            // Find local project directory
-            $localPath = $this->findLocalPath($config, $slug ?? $meta['slug'] ?? null);
+        // Find local project directory
+        $localPath = $this->findLocalPath($config, $slug ?? $meta['slug'] ?? null);
 
-            // Drop database (unless --keep-db)
-            if (! $this->option('keep-db')) {
-                $dbResult = $this->dropDatabase($slug ?? $meta['slug'] ?? null, $localPath);
-                $meta['database'] = $dbResult;
+        // Drop database (unless --keep-db)
+        if (! $this->option('keep-db')) {
+            $dbResult = $this->dropDatabase($slug ?? $meta['slug'] ?? null, $localPath);
+            $meta['database'] = $dbResult;
 
-                if ($dbResult['success'] && ! empty($dbResult['database'])) {
+            if ($dbResult['success'] && ! empty($dbResult['database'])) {
+                if (! $this->wantsJson()) {
                     $this->info("Database '{$dbResult['database']}' dropped");
                 }
             }
+        }
 
-            // Remove local project directory if it exists
-            if ($localPath && is_dir($localPath)) {
-                $shouldDelete = $force || ! $this->input->isInteractive();
-                if (! $shouldDelete && $this->input->isInteractive()) {
-                    $shouldDelete = $this->confirm("Delete local directory {$localPath}?", true);
+        // Remove local project directory if it exists
+        if ($localPath && is_dir($localPath)) {
+            $shouldDelete = $force || ! $this->input->isInteractive();
+            if (! $shouldDelete && $this->input->isInteractive()) {
+                $shouldDelete = $this->confirm("Delete local directory {$localPath}?", true);
+            }
+
+            if ($shouldDelete) {
+                $rmResult = Process::run('rm -rf '.escapeshellarg($localPath));
+                if (! $rmResult->successful()) {
+                    // Fallback to sudo if permission denied (e.g., files created by PHP container)
+                    Process::run('sudo rm -rf '.escapeshellarg($localPath));
                 }
-
-                if ($shouldDelete) {
-                    Process::run('rm -rf '.escapeshellarg($localPath));
-                    $meta['local_deleted'] = true;
+                $meta['local_deleted'] = true;
+                if (! $this->wantsJson()) {
                     $this->info("Local directory deleted: {$localPath}");
                 }
             }
-
-            // Regenerate Caddy config
-            $caddy->generate();
-            $caddy->reload();
-
-            return $this->outputJsonSuccess([
-                'message' => 'Project deleted successfully',
-                'deleted' => $meta,
-            ]);
-
-        } catch (\Throwable $e) {
-            return $this->failWithMessage($e->getMessage());
+        } elseif ($localPath === null && $slug) {
+            if (! $this->wantsJson()) {
+                $this->warn("Local directory not found for: {$slug}");
+            }
         }
+
+        // Regenerate Caddy config
+        $caddy->generate();
+        $caddy->reload();
+
+        $response = [
+            'message' => 'Project deleted successfully',
+            'deleted' => $meta,
+        ];
+
+        if ($warnings !== []) {
+            $response['warnings'] = $warnings;
+        }
+
+        return $this->outputJsonSuccess($response);
     }
 
     private function getSlugFromId(McpClient $mcp, int $id): string
     {
-        // Get project details to retrieve slug for confirmation
         $result = $mcp->callTool('get-project', ['id' => $id]);
 
         return $result['meta']['slug'] ?? throw new \RuntimeException('Could not retrieve project slug');
@@ -144,30 +173,23 @@ final class ProjectDeleteCommand extends Command
         return null;
     }
 
-    /**
-     * Drop the project database from PostgreSQL (only if project uses PostgreSQL).
-     */
     private function dropDatabase(?string $slug, ?string $localPath): array
     {
-        // Check DB_CONNECTION from .env to determine if we should drop a PostgreSQL database
         $dbConnection = null;
         $database = null;
 
         if ($localPath && file_exists("{$localPath}/.env")) {
             $envContent = file_get_contents("{$localPath}/.env");
 
-            // Get DB_CONNECTION
             if (preg_match('/^DB_CONNECTION=(.+)$/m', $envContent, $matches)) {
                 $dbConnection = trim($matches[1]);
             }
 
-            // Get DB_DATABASE
             if (preg_match('/^DB_DATABASE=(.+)$/m', $envContent, $matches)) {
                 $database = trim($matches[1]);
             }
         }
 
-        // Only proceed if the project uses PostgreSQL
         $postgresConnections = ['pgsql', 'postgres', 'postgresql'];
         if ($dbConnection && ! in_array(strtolower($dbConnection), $postgresConnections, true)) {
             return [
@@ -177,8 +199,6 @@ final class ProjectDeleteCommand extends Command
             ];
         }
 
-        // If no .env or no DB_CONNECTION, check if a database with the slug name exists
-        // This handles cases where the .env was already deleted or project wasn't fully set up
         if (! $database && $slug) {
             $database = $slug;
         }
@@ -187,13 +207,11 @@ final class ProjectDeleteCommand extends Command
             return ['success' => true, 'message' => 'No database to drop'];
         }
 
-        // Check if PostgreSQL container is running
         $containerCheck = Process::run("docker ps --filter name=launchpad-postgres --format '{{.Names}}' 2>&1");
         if (! str_contains($containerCheck->output(), 'launchpad-postgres')) {
             return ['success' => true, 'message' => 'PostgreSQL container not running'];
         }
 
-        // Check if database exists
         $checkResult = Process::run(
             "docker exec launchpad-postgres psql -U launchpad -tAc \"SELECT 1 FROM pg_database WHERE datname='{$database}'\" 2>&1"
         );
@@ -202,12 +220,10 @@ final class ProjectDeleteCommand extends Command
             return ['success' => true, 'message' => 'Database does not exist', 'database' => $database];
         }
 
-        // Terminate existing connections to the database
         Process::run(
             "docker exec launchpad-postgres psql -U launchpad -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{$database}' AND pid <> pg_backend_pid();\" 2>&1"
         );
 
-        // Drop the database
         $result = Process::run(
             "docker exec launchpad-postgres psql -U launchpad -c \"DROP DATABASE IF EXISTS \\\"{$database}\\\";\" 2>&1"
         );

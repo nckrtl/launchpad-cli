@@ -100,7 +100,8 @@ class CreateProjectJob implements ShouldQueue
             $result = Process::timeout($this->timeout - 60)
                 ->env([
                     'HOME' => $_SERVER['HOME'] ?? '/home/launchpad',
-                    'PATH' => ($_SERVER['HOME'] ?? '/home/launchpad').'/.local/bin:'.
+                    'PATH' => ($_SERVER['HOME'] ?? '/home/launchpad').'/.bun/bin:'.
+                              ($_SERVER['HOME'] ?? '/home/launchpad').'/.local/bin:'.
                               ($_SERVER['HOME'] ?? '/home/launchpad').'/.config/herd-lite/bin:'.
                               '/usr/local/bin:/usr/bin:/bin',
                 ])

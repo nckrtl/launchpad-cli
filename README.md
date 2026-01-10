@@ -152,8 +152,22 @@ Worktrees are served from `<worktree-name>.<site>.test`.
 
 ## Requirements
 
-- Docker
-- macOS or Linux
+### Required
+
+| Dependency | macOS | Linux |
+|------------|-------|-------|
+| PHP >= 8.2 | `php.new` or Homebrew | `php.new` or apt |
+| Docker | OrbStack (recommended) or Docker Desktop | docker.io |
+| Composer | Homebrew | apt |
+| Supervisor | Homebrew | apt (for Horizon queue worker) |
+
+### Optional
+
+| Dependency | Purpose |
+|------------|---------|
+| dig | DNS debugging (built-in on macOS, `apt install dnsutils` on Linux) |
+
+**Note:** The `launchpad init` command will check for and automatically install missing prerequisites.
 
 ## Development
 

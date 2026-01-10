@@ -5,32 +5,63 @@ namespace App\Commands;
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use App\Services\DockerManager;
+use App\Services\PlatformService;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\spin;
+use function Laravel\Prompts\warning;
+
 class InitCommand extends Command
 {
-    protected $signature = 'init';
+    protected $signature = 'init
+        {--yes : Skip all confirmations}
+        {--skip-prerequisites : Skip prerequisite checks}';
 
     protected $description = 'First-time setup: creates config directory, pulls images, sets up DNS';
+
+    protected bool $autoConfirm = false;
 
     public function handle(
         ConfigManager $configManager,
         DockerManager $dockerManager,
-        CaddyfileGenerator $caddyfileGenerator
+        CaddyfileGenerator $caddyfileGenerator,
+        PlatformService $platformService
     ): int {
-        $this->info('Creating Launchpad...');
+        $this->autoConfirm = $this->option('yes');
 
-        // Check if Docker is running
-        $dockerCheck = Process::run('docker info');
-        if (! $dockerCheck->successful()) {
-            $this->error('Docker is not running. Please start Docker/OrbStack first.');
+        info('Initializing Launchpad...');
+        $this->newLine();
+
+        // Check and install prerequisites
+        if (! $this->option('skip-prerequisites')) {
+            if (! $this->checkPrerequisites($platformService)) {
+                return self::FAILURE;
+            }
+        }
+
+        // Check if Docker is actually running (even if installed)
+        if (! $platformService->hasDocker()) {
+            $runtime = $platformService->getContainerRuntime() ?? 'Docker';
+            $this->error("{$runtime} is installed but not running. Please start it first.");
 
             return self::FAILURE;
         }
 
         $configPath = $configManager->getConfigPath();
+        $isFirstRun = ! File::exists("{$configPath}/config.json");
+
+        if ($isFirstRun) {
+            note('First-time setup detected');
+        } else {
+            note('Existing installation detected - updating configuration');
+        }
+
+        $this->newLine();
 
         // 1. Create directory structure
         $this->task('Creating directories', function () use ($configPath) {
@@ -93,7 +124,10 @@ class InitCommand extends Command
         // 6. Configure /etc/hosts for Redis
         $this->task('Configuring /etc/hosts', $this->configureHosts(...));
 
-        // 7. Build DNS container
+        // 7. Configure DNS for the host system
+        $this->task('Configuring DNS', fn () => $this->configureDns($platformService, $configManager));
+
+        // 8. Build DNS container
         $this->task('Building DNS container', function () use ($dockerManager) {
             $result = $dockerManager->build('dns');
             if (! $result && $dockerManager->getLastError()) {
@@ -103,72 +137,240 @@ class InitCommand extends Command
             return $result;
         });
 
-        // 8. Build PHP images (with Redis and other extensions)
-        $this->task('Building PHP images (this may take a while)', function () use ($dockerManager) {
-            $result = $dockerManager->build('php');
-            if (! $result && $dockerManager->getLastError()) {
-                $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
-            }
+        // 9. Build PHP images (with Redis and other extensions)
+        spin(
+            fn () => $dockerManager->build('php'),
+            'Building PHP images (this may take a while)...'
+        );
+        $this->line('  <fg=green>✓</> Building PHP images');
 
-            return $result;
-        });
+        // 10. Pull service images (in parallel-ish, at least show progress)
+        $this->pullImages($dockerManager);
 
-        // 9. Pull service images
-        $this->task('Pulling Caddy image', function () use ($dockerManager) {
-            $result = $dockerManager->pull('caddy');
-            if (! $result && $dockerManager->getLastError()) {
-                $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
-            }
-
-            return $result;
-        });
-
-        $this->task('Pulling Postgres image', function () use ($dockerManager) {
-            $result = $dockerManager->pull('postgres');
-            if (! $result && $dockerManager->getLastError()) {
-                $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
-            }
-
-            return $result;
-        });
-
-        $this->task('Pulling Redis image', function () use ($dockerManager) {
-            $result = $dockerManager->pull('redis');
-            if (! $result && $dockerManager->getLastError()) {
-                $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
-            }
-
-            return $result;
-        });
-
-        $this->task('Pulling Mailpit image', function () use ($dockerManager) {
-            $result = $dockerManager->pull('mailpit');
-            if (! $result && $dockerManager->getLastError()) {
-                $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
-            }
-
-            return $result;
-        });
-
-        // 10. Install composer-link globally for package development
+        // 11. Install composer-link globally for package development
         $this->task('Installing composer-link plugin', function () {
+            // Check if already installed
+            $checkResult = Process::run('composer global show sandersander/composer-link 2>/dev/null');
+            if ($checkResult->successful()) {
+                return true;
+            }
+
             $result = Process::run('composer global config --no-plugins allow-plugins.sandersander/composer-link true && composer global require sandersander/composer-link --quiet');
 
             return $result->successful();
         });
 
-        // 11. Install cron job for ensure command
-        $this->task('Installing cron job', $this->installCronJob(...));
+        // 12. Configure supervisor for Horizon queue worker
+        $this->task('Configuring supervisor for Horizon', fn () => $this->configureSupervisor($platformService, $configManager));
 
         $this->newLine();
-        $this->warn('Point your DNS to 127.0.0.1:');
-        $this->line('  System Settings → Network → Wi-Fi → Details → DNS');
-        $this->line('  Or: sudo networksetup -setdnsservers Wi-Fi 127.0.0.1');
-
-        $this->newLine();
-        $this->info('Done! Run: launchpad start');
+        $this->showCompletionMessage($platformService, $configManager);
 
         return self::SUCCESS;
+    }
+
+    protected function checkPrerequisites(PlatformService $platformService): bool
+    {
+        $checks = $platformService->checkPrerequisites();
+        $allPassed = true;
+        $installable = [];
+
+        $this->line('<fg=cyan>Checking prerequisites...</>');
+        $this->newLine();
+
+        foreach ($checks as $key => $check) {
+            $optional = $check['optional'] ?? false;
+            $status = $check['installed'];
+
+            if ($status) {
+                $version = $check['version'] ? " ({$check['version']})" : '';
+                $this->line("  <fg=green>✓</> {$check['name']}{$version}");
+            } else {
+                $icon = $optional ? '<fg=yellow>○</>' : '<fg=red>✗</>';
+                $this->line("  {$icon} {$check['name']} - {$check['required']}");
+
+                if (! $optional) {
+                    $allPassed = false;
+                    if ($check['installable']) {
+                        $installable[$key] = $check;
+                    }
+                }
+            }
+        }
+
+        $this->newLine();
+
+        // If something is missing and can be installed, offer to install
+        if (! $allPassed && ! empty($installable)) {
+            $shouldInstall = $this->autoConfirm || confirm(
+                'Would you like to install missing prerequisites?',
+                default: true
+            );
+
+            if ($shouldInstall) {
+                foreach ($installable as $key => $check) {
+                    $this->installPrerequisite($key, $platformService);
+                }
+
+                // Re-check after installation
+                $checks = $platformService->checkPrerequisites();
+                $allPassed = true;
+                foreach ($checks as $check) {
+                    if (! $check['installed'] && ! ($check['optional'] ?? false)) {
+                        $allPassed = false;
+                    }
+                }
+            }
+        }
+
+        if (! $allPassed) {
+            $this->error('Some prerequisites are missing and could not be installed.');
+            $this->line('Please install them manually and run init again.');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function installPrerequisite(string $key, PlatformService $platformService): void
+    {
+        $success = match ($key) {
+            'php' => spin(
+                fn () => $platformService->installPhp('8.4'),
+                'Installing PHP 8.4...'
+            ),
+            'docker' => spin(
+                fn () => $platformService->installDocker(),
+                'Installing Docker...'
+            ),
+            'composer' => spin(
+                fn () => $platformService->installComposer(),
+                'Installing Composer...'
+            ),
+            'dig' => spin(
+                fn () => $platformService->installDig(),
+                'Installing dig...'
+            ),
+            'supervisor' => spin(
+                fn () => $platformService->installSupervisor(),
+                'Installing Supervisor...'
+            ),
+            default => false,
+        };
+
+        if ($success) {
+            $this->line("  <fg=green>✓</> Installed {$key}");
+        } else {
+            $this->line("  <fg=red>✗</> Failed to install {$key}");
+        }
+    }
+
+    protected function configureDns(PlatformService $platformService, ConfigManager $configManager): bool
+    {
+        $tld = $configManager->getTld();
+        $dnsStatus = $platformService->getDnsStatus($tld);
+
+        // On macOS with existing dnsmasq for this TLD, we're good
+        if (($dnsStatus['status'] ?? '') === 'dnsmasq_configured') {
+            return true;
+        }
+
+        // On Linux with systemd-resolved conflict, configure it
+        if ($platformService->isLinux() && ($dnsStatus['status'] ?? '') === 'systemd_resolved_conflict') {
+            if (! $this->autoConfirm && ! confirm(
+                'systemd-resolved is using port 53. Configure it to allow Docker DNS?',
+                default: true
+            )) {
+                warning('DNS may not work correctly without this configuration.');
+
+                return true; // Continue anyway
+            }
+
+            $result = $platformService->configureSystemdResolved();
+            if (! $result) {
+                warning('Failed to configure systemd-resolved. You may need to do this manually.');
+
+                return true; // Continue anyway
+            }
+
+            // Also update resolv.conf
+            $platformService->configureResolvConf();
+
+            return true;
+        }
+
+        // Port 53 in use by something else
+        if (($dnsStatus['status'] ?? '') === 'port_53_conflict') {
+            warning('Port 53 is in use by another process. Docker DNS may not work.');
+            $this->line('  Please free port 53 or configure your system DNS to point to 127.0.0.1');
+
+            return true; // Continue anyway
+        }
+
+        return true;
+    }
+
+    protected function configureSupervisor(PlatformService $platformService, ConfigManager $configManager): bool
+    {
+        // Check if supervisor is installed
+        if (! $platformService->hasSupervisor()) {
+            // Try to install it
+            if (! $platformService->installSupervisor()) {
+                return false;
+            }
+        }
+
+        // Check if config already exists
+        if ($platformService->hasLaunchpadHorizonConfig()) {
+            return true;
+        }
+
+        // Get web app path and current user
+        $webAppPath = $configManager->getWebAppPath();
+        $user = getenv('USER') ?: 'launchpad';
+
+        // Install the supervisor config
+        return $platformService->installLaunchpadHorizonConfig($webAppPath, $user);
+    }
+
+    protected function pullImages(DockerManager $dockerManager): void
+    {
+        $services = ['caddy', 'postgres', 'redis', 'mailpit'];
+
+        foreach ($services as $service) {
+            $this->task("Pulling {$service} image", function () use ($dockerManager, $service) {
+                $result = $dockerManager->pull($service);
+                if (! $result && $dockerManager->getLastError()) {
+                    $this->output->write(" <fg=red>{$dockerManager->getLastError()}</>");
+                }
+
+                return $result;
+            });
+        }
+    }
+
+    protected function showCompletionMessage(PlatformService $platformService, ConfigManager $configManager): void
+    {
+        $tld = $configManager->getTld();
+
+        if ($platformService->isMacOS()) {
+            warning('Configure your DNS to point to 127.0.0.1:');
+            $this->line('  System Settings → Network → Wi-Fi → Details → DNS');
+            $this->line('  Or: sudo networksetup -setdnsservers Wi-Fi 127.0.0.1');
+        } elseif ($platformService->isLinux()) {
+            // Check if we configured DNS
+            if ($platformService->isSystemdResolvedStubDisabled()) {
+                $this->line('<fg=green>DNS configured automatically via systemd-resolved.</>');
+            } else {
+                warning('Ensure /etc/resolv.conf points to 127.0.0.1');
+                $this->line('  Or configure systemd-resolved manually.');
+            }
+        }
+
+        $this->newLine();
+        info('Done! Run: launchpad start');
+        $this->line("  Your sites will be available at https://*.{$tld}");
     }
 
     protected function copyStubDirectory(string $source, string $destination): void
@@ -240,6 +442,10 @@ class InitCommand extends Command
         }
     }
 
+    /**
+     * @param  array<int, string>  $excludeDirs
+     * @param  array<int, string>  $excludeFiles
+     */
     protected function recursiveCopy(string $source, string $destination, array $excludeDirs, array $excludeFiles, string $relativePath = ''): void
     {
         $items = File::files($source);
@@ -329,30 +535,6 @@ REVERB_SCHEME=https
 ENV;
 
         File::put("{$webAppPath}/.env", $env);
-    }
-
-    protected function installCronJob(): bool
-    {
-        $launchpadBin = (getenv('HOME') ?: '/home/launchpad').'/.local/bin/launchpad';
-        $logPath = (getenv('HOME') ?: '/home/launchpad').'/.config/launchpad/logs/ensure.log';
-        $cronEntry = "* * * * * {$launchpadBin} ensure >> {$logPath} 2>&1";
-
-        // Get current crontab
-        $result = Process::run('crontab -l 2>/dev/null');
-        $currentCrontab = $result->successful() ? trim($result->output()) : '';
-
-        // Check if entry already exists
-        if (str_contains($currentCrontab, 'launchpad ensure')) {
-            return true;
-        }
-
-        // Add new entry
-        $newCrontab = $currentCrontab ? "{$currentCrontab}\n{$cronEntry}" : $cronEntry;
-
-        // Install new crontab
-        $result = Process::run("echo \"{$newCrontab}\" | crontab -");
-
-        return $result->successful();
     }
 
     protected function configureHosts(): bool
