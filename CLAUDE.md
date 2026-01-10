@@ -591,7 +591,7 @@ launchpad project:create my-app \
 
 ### provision (Background Command)
 
-Runs in background via `at now` to avoid blocking SSH connections. Broadcasts status updates via Reverb WebSocket.
+When called via API (CreateProjectJob), runs in Horizon queue on the HOST. When called directly via CLI, runs synchronously. Broadcasts status updates via Reverb WebSocket.
 
 **Status Flow:**
 1. `provisioning` - Initial state
@@ -781,6 +781,27 @@ Non-TTY safe commands (what the CLI uses):
 ssh launchpad@10.8.0.16 "cd ~/projects/test && bun install --no-progress"
 ```
 
+
+### Historical Fixes (Jan 2026)
+
+**PATH Bug in CreateProjectJob:**
+- **Issue:** Bun install hung indefinitely during API-based provisioning
+- **Cause:** PATH was malformed as `$home/home/launchpad/.bun/bin` (double home directory)
+- **Fix:** Changed to proper interpolation `{$home}/.bun/bin`
+- **Location:** `~/.config/launchpad/web/app/Jobs/CreateProjectJob.php`
+
+**ProjectController Using `at now`:**
+- **Issue:** Projects created via API never provisioned
+- **Cause:** `at now` daemon doesn't work from Docker container (no `at` daemon inside container)
+- **Fix:** Changed to dispatch `CreateProjectJob` via Horizon (which runs on HOST)
+- **Location:** `~/.config/launchpad/web/app/Http/Controllers/Api/ProjectController.php`
+
+**Broadcast Exceptions Failing Jobs:**
+- **Issue:** Jobs failed with "Could not resolve host: reverb.ccc"
+- **Cause:** Horizon runs on HOST which doesn't use launchpad DNS resolver
+- **Fix:** Made `broadcast()` catch exceptions (non-blocking) so jobs complete even if WebSocket unreachable
+- **Location:** `~/.config/launchpad/web/app/Jobs/CreateProjectJob.php`
+
 ## Launchpad Web App & Queue Processing
 
 The CLI includes a Laravel web app (`~/.config/launchpad/web/`) that provides an API for project management and uses Horizon for queue processing.
@@ -953,3 +974,97 @@ redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default
 - Check Laravel logs: `tail -f ~/.config/launchpad/web/storage/logs/laravel.log`
 - Run provision command directly to see full error output
 
+
+## PHP Container Permissions (Non-Root)
+
+As of v0.0.20, PHP containers run as a non-root user to ensure proper file ownership.
+
+### Why Non-Root?
+
+When FrankenPHP ran as root, files created by PHP (view cache, logs, sessions) were owned by `root:root`. This caused permission issues when:
+- Running artisan commands as the launchpad user
+- Accessing files created by web requests
+- Deploying or updating code
+
+### Container User Configuration
+
+The PHP Dockerfiles (`stubs/php/Dockerfile.php8x`) create a `launchpad` user matching the host:
+
+```dockerfile
+# Create launchpad user with same UID/GID as host (1001:1001)
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+ARG DOCKER_GID=988
+
+RUN groupadd -g ${GROUP_ID} launchpad && \
+    useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash launchpad && \
+    groupadd -g ${DOCKER_GID} dockerhost && \
+    usermod -aG dockerhost launchpad
+
+# Set ownership of FrankenPHP directories
+RUN mkdir -p /data /config && \
+    chown -R launchpad:launchpad /data /config
+
+# Create launchpad config directory
+RUN mkdir -p /home/launchpad/.config/launchpad && \
+    chown -R launchpad:launchpad /home/launchpad/.config
+
+USER launchpad
+```
+
+### Key Details
+
+| Setting | Value | Purpose |
+|---------|-------|---------|
+| UID | 1001 | Matches host `launchpad` user |
+| GID | 1001 | Matches host `launchpad` group |
+| Docker GID | 988 | Allows docker socket access for status checks |
+| Config mount | `/home/launchpad/.config/launchpad` | Container reads launchpad config |
+
+### Docker Socket Access
+
+The container user is added to a `dockerhost` group (GID 988) to access `/var/run/docker.sock`. This enables:
+- `launchpad status --json` from within containers
+- Docker container inspection for health checks
+
+### PhpComposeGenerator
+
+The `PhpComposeGenerator` service mounts the config directory appropriately:
+
+```php
+// Mount the launchpad config directory to /home/launchpad/.config/launchpad
+// This allows the CLI web app (running as launchpad user in FrankenPHP) to read the config
+if (File::isDirectory($configPath)) {
+    return "      - {$configPath}:/home/launchpad/.config/launchpad:ro\n";
+}
+```
+
+### Verifying Container User
+
+```bash
+# Check which user is running in the container
+docker exec launchpad-php-85 whoami
+# Output: launchpad
+
+# Verify UID/GID
+docker exec launchpad-php-85 id
+# Output: uid=1001(launchpad) gid=1001(launchpad) groups=1001(launchpad),988(dockerhost)
+
+# Verify docker socket access
+docker exec launchpad-php-85 docker ps --format "{{.Names}}" | head -3
+```
+
+### Migration from Root Containers
+
+If upgrading from a version that ran as root, rebuild containers:
+
+```bash
+cd ~/.config/launchpad/php
+docker compose build --no-cache
+docker compose up -d
+```
+
+Existing files owned by root can be fixed with:
+```bash
+sudo chown -R launchpad:launchpad ~/projects/*/storage
+```
