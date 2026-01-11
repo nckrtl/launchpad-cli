@@ -12,22 +12,10 @@
  * 6. Delete the project via API (dispatches DeleteProjectJob)
  * 7. Track deletion status via log files until "deleted"
  *
- * The test validates that all expected status broadcasts are sent.
- * Note: This reads from CLI log files as a proxy for WebSocket broadcasts.
- * The CLI logs each status AND broadcasts it via Reverb.
- *
- * IMPORTANT: This test creates real projects and cleans up after itself.
- * It requires the full launchpad stack to be running (Horizon, Reverb, etc.)
- *
  * Usage:
  *   php tests/e2e-desktop-flow-test.php           # Full test (create + delete)
  *   php tests/e2e-desktop-flow-test.php --keep    # Create only, skip deletion
  *   TLD=test php tests/e2e-desktop-flow-test.php  # Use different TLD
- *
- * Expected output on success:
- *   Provision: provisioning -> creating_repo -> cloning -> ... -> ready
- *   Deletion:  deleting -> removing_orchestrator -> removing_files -> deleted
- *   ALL TESTS PASSED
  */
 
 require __DIR__.'/../vendor/autoload.php';
@@ -76,19 +64,21 @@ function httpRequest(string $method, string $url, array $data = [], array $optio
     curl_setopt($ch, CURLOPT_TIMEOUT, $options['timeout'] ?? 30);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
+    $headers = ['Accept: application/json'];
+
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Accept: application/json']);
+        $headers[] = 'Content-Type: application/json';
     } elseif ($method === 'DELETE') {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json']);
     }
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    
 
     return [
         'code' => $httpCode,
@@ -99,8 +89,23 @@ function httpRequest(string $method, string $url, array $data = [], array $optio
 }
 
 /**
+ * Visit URL using curl command with --resolve to bypass DNS
+ */
+function visitUrlWithResolve(string $host, string $tld): array
+{
+    $url = "https://{$host}.{$tld}/";
+    // Use --resolve to map the hostname to 127.0.0.1
+    $cmd = "curl -s -o /dev/null -w '%{http_code}' --resolve '{$host}.{$tld}:443:127.0.0.1' -k '{$url}' 2>&1";
+    $httpCode = trim(shell_exec($cmd));
+
+    return [
+        'code' => (int) $httpCode,
+        'url' => $url,
+    ];
+}
+
+/**
  * Read status updates from CLI log files.
- * The CLI logs each status change AND broadcasts via Reverb.
  */
 function getLoggedStatuses(string $slug, string $type): array
 {
@@ -235,22 +240,23 @@ if (isset($dbCheck['error'])) {
     echo '  Tables: '.implode(', ', $dbCheck['tables'])."\n\n";
 }
 
-// Step 5: Visit the project URL
+// Step 5: Visit the project URL (using --resolve to bypass DNS)
 echo "[5/9] Visiting project URL...\n";
-$projectUrl = "https://{$slug}.{$tld}/";
-$urlResponse = httpRequest('GET', $projectUrl, [], ['timeout' => 10]);
+$urlResponse = visitUrlWithResolve($slug, $tld);
 
 if ($urlResponse['code'] === 200) {
-    echo "  OK - HTTP 200 from {$projectUrl}\n\n";
+    echo "  OK - HTTP 200 from {$urlResponse['url']}\n\n";
 } elseif ($urlResponse['code'] === 500) {
-    echo "  FAIL: HTTP 500 (server error) from {$projectUrl}\n\n";
+    echo "  FAIL: HTTP 500 (server error) from {$urlResponse['url']}\n\n";
     $errors[] = "Project URL returned HTTP 500";
 } elseif ($urlResponse['code'] === 0) {
-    echo "  FAIL: Could not connect to {$projectUrl}\n";
-    echo "  Error: {$urlResponse['error']}\n\n";
+    echo "  FAIL: Could not connect to {$urlResponse['url']}\n\n";
     $errors[] = "Could not connect to project URL";
+} elseif ($urlResponse['code'] === 404) {
+    echo "  FAIL: HTTP 404 - Site not found in Caddy\n\n";
+    $errors[] = "Project URL returned HTTP 404";
 } else {
-    echo "  WARN: HTTP {$urlResponse['code']} from {$projectUrl}\n\n";
+    echo "  WARN: HTTP {$urlResponse['code']} from {$urlResponse['url']}\n\n";
 }
 
 // Step 6: Check Laravel logs for errors
