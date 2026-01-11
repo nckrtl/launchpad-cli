@@ -8,7 +8,9 @@ use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
+use App\Services\DeletionLogger;
 use App\Services\McpClient;
+use App\Services\ReverbBroadcaster;
 use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
@@ -27,10 +29,13 @@ final class ProjectDeleteCommand extends Command
 
     protected $description = 'Delete a project and cascade to integrations (Orchestrator + VK + Linear + Database)';
 
+    private ?DeletionLogger $logger = null;
+
     public function handle(
         ConfigManager $config,
         CaddyfileGenerator $caddy,
         McpClient $mcp,
+        ReverbBroadcaster $broadcaster,
     ): int {
         /** @var string|null $slug */
         $slug = $this->argument('slug') ?? $this->option('slug');
@@ -48,6 +53,16 @@ final class ProjectDeleteCommand extends Command
             return $this->failWithMessage('Project slug or --id is required');
         }
 
+        // Initialize logger with broadcaster for status updates
+        $this->logger = new DeletionLogger(
+            broadcaster: $broadcaster,
+            command: $this->wantsJson() ? null : $this,
+            slug: $slug,
+        );
+
+        // Broadcast initial deleting status
+        $this->logger->broadcast('deleting');
+
         // Confirmation prompt (unless --force)
         $force = (bool) $this->option('force');
         if (! $force && $this->input->isInteractive()) {
@@ -56,6 +71,8 @@ final class ProjectDeleteCommand extends Command
             );
 
             if ($confirm !== $slug && $confirm !== $id) {
+                $this->logger->broadcast('delete_failed', 'Confirmation failed');
+
                 return $this->failWithMessage('Confirmation failed. Deletion cancelled.');
             }
         }
@@ -65,6 +82,7 @@ final class ProjectDeleteCommand extends Command
 
         // Try to delete from orchestrator if configured (non-fatal if fails)
         if ($mcp->isConfigured()) {
+            $this->logger->broadcast('removing_orchestrator');
             try {
                 $result = $mcp->callTool('delete-project', [
                     'slug' => $slug,
@@ -73,9 +91,7 @@ final class ProjectDeleteCommand extends Command
                     'delete_github_repo' => (bool) $this->option('delete-repo'),
                 ]);
                 $meta = $result['meta'] ?? [];
-                if (! $this->wantsJson()) {
-                    $this->info('Deleted from orchestrator');
-                }
+                $this->logger->info('Deleted from orchestrator');
             } catch (\Throwable $e) {
                 $errorMsg = $e->getMessage();
                 // Truncate HTML error responses
@@ -83,14 +99,10 @@ final class ProjectDeleteCommand extends Command
                     $errorMsg = 'Orchestrator MCP endpoint returned 404';
                 }
                 $warnings[] = 'Orchestrator delete failed: '.$errorMsg;
-                if (! $this->wantsJson()) {
-                    $this->warn('Orchestrator delete failed (continuing with local delete)');
-                }
+                $this->logger->warn('Orchestrator delete failed (continuing with local delete)');
             }
         } else {
-            if (! $this->wantsJson()) {
-                $this->warn('Orchestrator not configured - skipping integration cleanup');
-            }
+            $this->logger->warn('Orchestrator not configured - skipping integration cleanup');
         }
 
         // Find local project directory
@@ -102,11 +114,12 @@ final class ProjectDeleteCommand extends Command
             $meta['database'] = $dbResult;
 
             if ($dbResult['success'] && ! empty($dbResult['database'])) {
-                if (! $this->wantsJson()) {
-                    $this->info("Database '{$dbResult['database']}' dropped");
-                }
+                $this->logger->info("Database '{$dbResult['database']}' dropped");
             }
         }
+
+        // Broadcast removing files status before directory deletion
+        $this->logger->broadcast('removing_files');
 
         // Remove local project directory if it exists
         if ($localPath && is_dir($localPath)) {
@@ -122,15 +135,15 @@ final class ProjectDeleteCommand extends Command
                     Process::run('sudo rm -rf '.escapeshellarg($localPath));
                 }
                 $meta['local_deleted'] = true;
-                if (! $this->wantsJson()) {
-                    $this->info("Local directory deleted: {$localPath}");
-                }
+                $this->logger->info("Local directory deleted: {$localPath}");
             }
         } elseif ($localPath === null && $slug) {
-            if (! $this->wantsJson()) {
-                $this->warn("Local directory not found for: {$slug}");
-            }
+            $this->logger->warn("Local directory not found for: {$slug}");
         }
+
+        // Broadcast successful deletion BEFORE Caddy reload
+        // (Caddy reload drops WebSocket connections, so broadcast first)
+        $this->logger->broadcast('deleted');
 
         // Regenerate Caddy config
         $caddy->generate();
@@ -251,6 +264,9 @@ final class ProjectDeleteCommand extends Command
         } else {
             $this->error($message);
         }
+
+        // Broadcast failure if logger is initialized
+        $this->logger?->broadcast('delete_failed', $message);
 
         return ExitCode::GeneralError->value;
     }

@@ -1442,3 +1442,105 @@ it('generates app key in real project', function () {
     // This would run the actual artisan command
 })->skip('Requires real Laravel project');
 ```
+
+
+## E2E Testing
+
+### Desktop Flow Test
+
+The web app includes an E2E test that replicates the desktop app workflow:
+
+```bash
+# Run from the web app directory
+cd ~/projects/launchpad-cli/web
+php tests/e2e-desktop-flow-test.php
+
+# Use different TLD
+TLD=test php tests/e2e-desktop-flow-test.php
+
+# Create project but skip deletion (for debugging)
+php tests/e2e-desktop-flow-test.php --keep
+```
+
+**What it tests:**
+1. Creates a project via `POST /api/projects` (uses `hardimpactdev/liftoff-starterkit`)
+2. Tracks provisioning status until `ready` or `failed`
+3. Deletes the project via `DELETE /api/projects/{slug}`
+4. Tracks deletion status until `deleted` or `delete_failed`
+
+**Expected status flows:**
+- Provision: `provisioning -> creating_repo -> cloning -> setting_up -> installing_composer -> installing_npm -> building -> finalizing -> ready`
+- Deletion: `deleting -> removing_orchestrator -> removing_files -> deleted`
+
+**Requirements:**
+- Full launchpad stack running (Caddy, PHP, Redis, Horizon, Reverb)
+- Web app deployed at `~/.config/launchpad/web/`
+- Horizon processing jobs
+
+## WebSocket Broadcasting
+
+### Architecture
+
+The CLI broadcasts status updates via Reverb (Laravel Reverb):
+
+```
+CLI (ReverbBroadcaster) -> Pusher HTTP API -> Reverb container -> WebSocket -> Desktop app
+```
+
+The desktop app connects via WebSocket to receive real-time updates.
+
+### Important: Caddy Reload and WebSocket Connections
+
+**Reverb traffic is proxied through Caddy.** When Caddy reloads (e.g., after site config changes), WebSocket connections are briefly dropped.
+
+**Critical ordering for broadcasts:**
+When performing operations that trigger a Caddy reload, broadcast the final status BEFORE reloading Caddy:
+
+```php
+// CORRECT - broadcast before Caddy reload
+$this->logger->broadcast('deleted');
+$caddy->generate();
+$caddy->reload();  // This drops WebSocket connections
+
+// WRONG - broadcast after Caddy reload (clients won't receive it)
+$caddy->generate();
+$caddy->reload();
+$this->logger->broadcast('deleted');  // Connection already dropped!
+```
+
+### Broadcast Channels
+
+Events are broadcast to two channels:
+1. `provisioning` - Global channel for all events (desktop subscribes at connect time)
+2. `project.{slug}` - Project-specific channel (desktop subscribes when tracking a specific project)
+
+### Event Names
+
+- `project.provision.status` - Provisioning status updates
+- `project.deletion.status` - Deletion status updates
+
+Both events include: `{ slug, status, timestamp, error? }`
+
+## Web App (API Backend)
+
+Located at `web/` directory, deployed to `~/.config/launchpad/web/`.
+
+### Job Flow
+
+1. **Desktop** calls API endpoint (e.g., `POST /api/projects`)
+2. **API** dispatches job to Redis queue (e.g., `CreateProjectJob`)
+3. **Horizon** (runs on HOST) picks up job and executes CLI command
+4. **CLI** performs operation and broadcasts status via `ReverbBroadcaster`
+5. **Desktop** receives updates via WebSocket
+
+### Updating the Deployed Web App
+
+After making changes to `web/`:
+
+```bash
+# Copy to deployed location
+cp -r ~/projects/launchpad-cli/web/* ~/.config/launchpad/web/
+
+# Restart Horizon to pick up changes
+docker restart launchpad-horizon
+```

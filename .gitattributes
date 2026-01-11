@@ -4,3 +4,6 @@
 BACKERS.md export-ignore
 CONTRIBUTING.md export-ignore
 CHANGELOG.md export-ignore
+
+# Use bd merge for beads JSONL files
+.beads/issues.jsonl merge=beads

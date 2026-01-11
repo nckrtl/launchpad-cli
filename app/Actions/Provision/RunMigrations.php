@@ -21,19 +21,26 @@ final readonly class RunMigrations
             return StepResult::success();
         }
 
+        // Determine PHP version for container
+        $phpVersion = $context->phpVersion ?? '8.5';
+        $containerName = "launchpad-php-{$phpVersion}";
+
         // Clear config cache to ensure fresh .env values are loaded
         $logger->info('Clearing config cache...');
-        Process::path($context->projectPath)
-            ->env($context->getPhpEnv())
-            ->timeout(30)
-            ->run('php artisan config:clear');
+        $clearResult = Process::timeout(30)->run(
+            "docker exec {$containerName} php {$context->projectPath}/artisan config:clear"
+        );
 
-        $logger->info('Running database migrations...');
+        if (! $clearResult->successful()) {
+            $logger->warn('config:clear failed: '.$clearResult->errorOutput());
+        }
 
-        $result = Process::path($context->projectPath)
-            ->env($context->getPhpEnv())
-            ->timeout(120)
-            ->run('php artisan migrate --force');
+        $logger->info("Running database migrations via {$containerName}...");
+
+        // Run migrations through the PHP container so it can access launchpad-postgres
+        $result = Process::timeout(120)->run(
+            "docker exec {$containerName} php {$context->projectPath}/artisan migrate --force"
+        );
 
         $output = trim($result->output());
         $errorOutput = trim($result->errorOutput());

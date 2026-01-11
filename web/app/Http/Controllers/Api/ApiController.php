@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\DeleteProjectJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
@@ -334,11 +335,18 @@ class ApiController extends Controller
     }
 
     /**
-     * Delete a project.
+     * Delete a project (async via job queue).
+     * The CLI handles broadcasting status updates via Reverb.
      */
     public function deleteProject(string $slug): JsonResponse
     {
-        return response()->json($this->executeCommand('project:delete', ['project' => $slug]));
+        DeleteProjectJob::dispatch($slug);
+
+        return response()->json([
+            'success' => true,
+            'status' => 'deleting',
+            'slug' => $slug,
+        ], 202);
     }
 
     /**

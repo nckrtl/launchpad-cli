@@ -13,13 +13,25 @@ services:
       - ${HOME}/.config/launchpad:/home/launchpad/.config/launchpad
       # Mount projects directory (needed for provisioning)
       - ${HOME}/projects:/home/launchpad/projects
+      # Mount host binaries needed by CLI
+      - /usr/bin/gh:/usr/bin/gh:ro
+      - /usr/bin/git:/usr/bin/git:ro
+      - /usr/bin/node:/usr/bin/node:ro
+      - /usr/bin/npm:/usr/bin/npm:ro
+      - /usr/local/bin/composer:/usr/local/bin/composer:ro
+      - ${HOME}/.bun/bin:/home/launchpad/.bun/bin:ro
+      # SSH keys (needed for git clone via SSH)
+      - ${HOME}/.ssh:/home/launchpad/.ssh:ro
+      # GitHub CLI config - mount to XDG location used by FrankenPHP
+      - ${HOME}/.config/gh:/config/gh:ro
     environment:
       - HOME=/home/launchpad
       - REDIS_HOST=launchpad-redis
       - REDIS_PORT=6379
       - REVERB_HOST=launchpad-reverb
-      - REVERB_PORT=8080
+      - REVERB_PORT=6001
       - REVERB_SCHEME=http
+      - PATH=/home/launchpad/.bun/bin:/home/launchpad/.local/bin:/usr/local/bin:/usr/bin:/bin
     working_dir: /app
     command: php artisan horizon
     user: launchpad
