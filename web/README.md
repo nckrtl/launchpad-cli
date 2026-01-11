@@ -8,7 +8,7 @@ The web app is **stateless by design**:
 
 - **No database** - `DB_CONNECTION=null`
 - **Redis for everything** - Cache, sessions, and queues use Redis
-- **Horizon for queues** - Managed by supervisord on the host
+- **Horizon for queues** - Runs in Docker container
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -26,7 +26,7 @@ The web app is **stateless by design**:
 │                           ┌─────────────────────────┐           │
 │                           │  Horizon (on host)      │           │
 │                           │  REDIS_HOST=127.0.0.1   │           │
-│                           │  Managed by supervisord │           │
+│                           │  Docker container │           │
 │                           └─────────────────────────┘           │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -61,39 +61,33 @@ Response:
 
 ## Horizon Queue Worker
 
-Horizon is managed by **supervisord** for automatic startup and crash recovery.
+Horizon runs as a Docker container (`launchpad-horizon`) managed by the CLI.
 
-### Supervisor Configuration
+### Docker Configuration
 
-Located at `/etc/supervisor/conf.d/launchpad-horizon.conf`:
-
-```ini
-[program:launchpad-horizon]
-process_name=%(program_name)s
-command=php ~/.config/launchpad/web/artisan horizon
-autostart=true
-autorestart=true
-user=launchpad
-environment=HOME="/home/launchpad",REDIS_HOST="127.0.0.1",PATH="..."
-redirect_stderr=true
-stdout_logfile=~/.config/launchpad/web/storage/logs/supervisor-horizon.log
-stopwaitsecs=10
-```
+Located at `~/.config/launchpad/horizon/docker-compose.yml`:
+- Uses the same PHP image as web containers
+- Mounts the web app at `/app`
+- Connects to Redis and Reverb via Docker network
+- Auto-restarts on failure
 
 ### Managing Horizon
 
 ```bash
 # Check status
-sudo supervisorctl status launchpad-horizon
+launchpad horizon:status
+docker ps | grep launchpad-horizon
 
-# Restart Horizon
-sudo supervisorctl restart launchpad-horizon
+# Start/Stop/Restart
+launchpad horizon:start
+launchpad horizon:stop
+docker restart launchpad-horizon
 
 # View logs
-tail -f ~/.config/launchpad/web/storage/logs/supervisor-horizon.log
+docker logs launchpad-horizon --tail 100 -f
 
 # Access dashboard
-open https://launchpad.test/horizon
+open https://launchpad.{tld}/horizon
 ```
 
 ## Configuration
@@ -103,48 +97,66 @@ open https://launchpad.test/horizon
 Key settings for stateless operation:
 
 ```bash
-DB_CONNECTION=null          # No database
-QUEUE_CONNECTION=redis      # Queues via Redis
-CACHE_STORE=redis          # Cache via Redis
-SESSION_DRIVER=redis       # Sessions via Redis
-REDIS_HOST=launchpad-redis  # Docker network name
+DB_CONNECTION=null           # No database
+QUEUE_CONNECTION=redis       # Queues via Redis
+CACHE_STORE=redis           # Cache via Redis
+SESSION_DRIVER=redis        # Sessions via Redis
+REDIS_HOST=launchpad-redis   # Docker network name
+REVERB_HOST=launchpad-reverb # Reverb container
+REVERB_PORT=6001            # Reverb port
 ```
 
 ### Redis Connections
 
-The web app uses different Redis hosts depending on context:
+Both the web app and Horizon run in Docker, using Docker network hostnames:
 
-| Context | REDIS_HOST | Why |
-|---------|------------|-----|
-| Web App (Docker) | `launchpad-redis` | Docker network name resolution |
-| Horizon (Host) | `127.0.0.1` | Direct connection from host |
+| Container | REDIS_HOST | Notes |
+|-----------|------------|-------|
+| launchpad-php-* | `launchpad-redis` | PHP containers for web requests |
+| launchpad-horizon | `launchpad-redis` | Queue worker container |
 
 ## Troubleshooting
 
 ### Jobs Not Processing
 
 ```bash
-# Check Horizon status
-sudo supervisorctl status launchpad-horizon
+# Check Horizon container is running
+docker ps | grep launchpad-horizon
 
-# Check Redis connectivity
-redis-cli -h 127.0.0.1 ping
+# Check container logs for errors
+docker logs launchpad-horizon --tail 50
+
+# Check Redis connectivity from Horizon container
+docker exec launchpad-horizon redis-cli -h launchpad-redis ping
 
 # Check pending jobs
-redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default
+docker exec launchpad-redis redis-cli LLEN launchpad_horizon:default
 ```
 
 ### Horizon Not Starting
 
 ```bash
-# View supervisor logs
-tail -f ~/.config/launchpad/web/storage/logs/supervisor-horizon.log
+# View container logs
+docker logs launchpad-horizon
 
-# Reload supervisor config
-sudo supervisorctl reread
-sudo supervisorctl update
+# Restart the container
+docker restart launchpad-horizon
+
+# Check health status
+docker inspect launchpad-horizon --format "{{.State.Health.Status}}"
 ```
 
+### Config Changes Not Taking Effect
+
+After changing `.env`, clear config cache:
+```bash
+docker exec launchpad-horizon php artisan config:clear
+docker restart launchpad-horizon
+```
+
+### Job Fails with Exit Code 1
+
+```bash
 ### Job Fails with Exit Code 1
 
 ```bash

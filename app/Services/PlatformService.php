@@ -530,42 +530,6 @@ class PlatformService
         return false;
     }
 
-    public function hasLaunchpadHorizonConfig(): bool
-    {
-        return file_exists('/etc/supervisor/conf.d/launchpad-horizon.conf');
-    }
-
-    public function installLaunchpadHorizonConfig(string $webAppPath, string $user): bool
-    {
-        $home = getenv('HOME') ?: "/home/{$user}";
-        $logFile = "{$webAppPath}/storage/logs/supervisor-horizon.log";
-
-        $config = <<<CONF
-[program:launchpad-horizon]
-process_name=%(program_name)s
-command=php {$webAppPath}/artisan horizon
-autostart=true
-autorestart=true
-user={$user}
-environment=HOME="{$home}",REDIS_HOST="127.0.0.1",PATH="{$home}/.config/herd-lite/bin:{$home}/.bun/bin:{$home}/.local/bin:/usr/local/bin:/usr/bin:/bin"
-redirect_stderr=true
-stdout_logfile={$logFile}
-stopwaitsecs=10
-CONF;
-
-        // Write config file
-        $result = Process::run("echo '{$config}' | sudo tee /etc/supervisor/conf.d/launchpad-horizon.conf > /dev/null");
-        if (! $result->successful()) {
-            return false;
-        }
-
-        // Reload supervisor
-        Process::run('sudo supervisorctl reread');
-        $result = Process::run('sudo supervisorctl update');
-
-        return $result->successful();
-    }
-
     // ===========================================
     // Prerequisite Summary
     // ===========================================

@@ -878,22 +878,43 @@ timeout => 900,  // 15 minutes for long-running provision jobs
 
 Note: `.bun/bin` must be in PATH for `bun install` to work during provisioning.
 
-### Supervisord Configuration
+### Horizon Docker Service
 
-Horizon is managed by supervisord for persistence and auto-restart:
+Horizon runs as a Docker container (`launchpad-horizon`) managed by the CLI:
 
-**Launchpad Horizon** (`/etc/supervisor/conf.d/launchpad-horizon.conf`):
-```ini
-[program:launchpad-horizon]
-process_name=%(program_name)s
-command=php /home/launchpad/.config/launchpad/web/artisan horizon
-autostart=true
-autorestart=true
-user=launchpad
-environment=HOME="/home/launchpad",REDIS_HOST="127.0.0.1",PATH="/home/launchpad/.config/herd-lite/bin:/home/launchpad/.bun/bin:/home/launchpad/.local/bin:/usr/local/bin:/usr/bin:/bin"
-redirect_stderr=true
-stdout_logfile=/home/launchpad/.config/launchpad/web/storage/logs/supervisor-horizon.log
-stopwaitsecs=10
+**Docker Compose** (`~/.config/launchpad/horizon/docker-compose.yml`):
+- Uses the same PHP image as the web containers
+- Mounts the web app, projects directory, and CLI binary
+- Connects to Redis and Reverb via Docker network
+- Includes health check via `php artisan horizon:status`
+
+**Managing Horizon:**
+```bash
+# Check status
+launchpad horizon:status
+
+# Start/Stop/Restart
+launchpad horizon:start
+launchpad horizon:stop
+launchpad restart  # Restarts all services including Horizon
+
+# View logs
+docker logs launchpad-horizon --tail 100 -f
+
+# Access Horizon dashboard
+open https://launchpad.{tld}/horizon
+```
+
+**Environment Variables:**
+The Horizon container receives these via docker-compose:
+- `REDIS_HOST=launchpad-redis` - Redis container hostname
+- `REVERB_HOST=launchpad-reverb` - Reverb container hostname
+- `REVERB_PORT=6001` - Reverb WebSocket port
+
+**Important:** After changing `.env` in the web app, clear the config cache:
+```bash
+docker exec launchpad-horizon php artisan config:clear
+docker restart launchpad-horizon
 ```
 
 ### Multiple Apps Sharing Redis
@@ -903,41 +924,9 @@ Multiple Laravel apps can share the same Redis instance for Horizon. Each app us
 | App | APP_NAME | Horizon Prefix |
 |-----|----------|----------------|
 | Launchpad Web | `Launchpad` | `launchpad_horizon:` |
-| Foundry | `Foundry` | `foundry_horizon:` |
+| Other Apps | `AppName` | `appname_horizon:` |
 
-**Foundry Horizon** (`/etc/supervisor/conf.d/foundry.conf`):
-```ini
-[program:foundry-horizon]
-process_name=%(program_name)s
-command=php /home/launchpad/projects/foundry/artisan horizon
-autostart=true
-autorestart=true
-user=launchpad
-environment=HOME="/home/launchpad",REDIS_HOST="127.0.0.1",PATH="/home/launchpad/.config/herd-lite/bin:/home/launchpad/.local/bin:/usr/local/bin:/usr/bin:/bin"
-redirect_stderr=true
-stdout_logfile=/home/launchpad/projects/foundry/storage/logs/supervisor-horizon.log
-stopwaitsecs=10
-```
-
-### Managing Horizon
-
-```bash
-# Check status of all supervised processes
-sudo supervisorctl status
-
-# Restart specific Horizon instance
-sudo supervisorctl restart launchpad-horizon
-sudo supervisorctl restart foundry-horizon
-
-# View logs
-tail -f ~/.config/launchpad/web/storage/logs/supervisor-horizon.log
-tail -f ~/projects/foundry/storage/logs/supervisor-horizon.log
-
-# Reload supervisor after config changes
-sudo supervisorctl reread
-sudo supervisorctl update
-```
-
+Note: Only Launchpad Horizon runs in Docker. Other apps (like Foundry) may still use supervisord on the host.
 
 ### API Endpoints (Web App)
 
@@ -970,7 +959,7 @@ curl -sk https://launchpad.ccc/api/projects \
 **Jobs not being processed:**
 ```bash
 # Check if Horizon is running
-sudo supervisorctl status launchpad-horizon
+docker ps | grep launchpad-horizon
 
 # Check Redis connectivity from host
 redis-cli -h 127.0.0.1 ping
@@ -980,7 +969,7 @@ redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default
 ```
 
 **Job fails with "command not found":**
-- Ensure PATH in supervisord config includes all required directories
+- Ensure PATH in Horizon docker-compose.yml includes all required directories
 - Check that `.bun/bin`, `.local/bin`, and `.config/herd-lite/bin` are in PATH
 
 **Job fails with exit code 1:**
@@ -1099,13 +1088,11 @@ Both read the same `.env` file, so we use environment variable overrides.
    REVERB_SCHEME=http
    ```
 
-2. **Supervisord config** - Overrides for Horizon on HOST:
-   ```ini
-   # /etc/supervisor/conf.d/launchpad-horizon.conf
-   environment=...,REVERB_HOST="127.0.0.1",REVERB_PORT="6001",REVERB_SCHEME="http",...
-   ```
+2. **Docker environment** - The Horizon container receives these env vars via docker-compose.yml:
+   The container reads from the mounted web app  file.
 
-Environment variables from supervisord override `.env` values because PHP checks actual env vars before loading `.env`.
+**Important:** After changing , clear config cache and restart:
+   
 
 **Safety net:** Both `CreateProjectJob` and `DeleteProjectJob` wrap `event()` in try/catch to prevent broadcast failures from failing the job.
 

@@ -14,7 +14,7 @@ Desktop App                     Remote Server (HOST)
 │  projects   │               │          └─ dispatch(Job)                     │
 └─────────────┘               │                    │ Redis Queue              │
                               │                    ▼                           │
-                              │  HOST (supervisord)                           │
+                              │  Docker container                           │
                               │  └─ Horizon Worker                            │
                               │      └─ CreateProjectJob / DeleteProjectJob   │
                               │          └─ launchpad CLI command             │
@@ -148,50 +148,48 @@ Located at `app/Jobs/DeleteProjectJob.php`. Dispatched when a project is deleted
 
 ## Horizon Configuration
 
-Horizon runs on the HOST via supervisord:
+Horizon runs in a Docker container (`launchpad-horizon`):
 
-```ini
-[program:launchpad-horizon]
-process_name=%(program_name)s
-command=php /home/launchpad/.config/launchpad/web/artisan horizon
-autostart=true
-autorestart=true
-user=launchpad
-environment=HOME="/home/launchpad",REDIS_HOST="127.0.0.1"
-redirect_stderr=true
-stdout_logfile=/home/launchpad/.config/launchpad/web/storage/logs/supervisor-horizon.log
-stopwaitsecs=10
-```
+- Uses the same PHP image as web containers
+- Mounts the web app at `/app`
+- Mounts `~/projects/` for provisioning access
+- Mounts CLI binary for `launchpad` commands
+- Connects to Redis/Reverb via Docker network
 
-**Why on HOST, not in container?**
-- CLI binary at `~/.local/bin/launchpad` needs access
-- Projects created in `~/projects/` (host filesystem)
-- Bun/node installed on host, need correct PATH
+**Why Docker container works:**
+- Web app and Horizon share the same container environment
+- Mounts give access to host filesystem (`~/projects/`)
+- CLI binary mounted from host at `/usr/local/bin/launchpad`
+- PATH includes host bin directories via volume mounts
 
 ## Debugging
 
 ### Check Horizon Status
 
 ```bash
-cd ~/.config/launchpad/web && php artisan horizon:status
+launchpad horizon:status
+docker ps | grep launchpad-horizon
 ```
 
 ### View Job Logs
 
 ```bash
+docker logs launchpad-horizon --tail 100 -f
 tail -f ~/.config/launchpad/web/storage/logs/laravel.log | grep -E "CreateProjectJob|DeleteProjectJob"
 ```
 
 ### Check for Failed Jobs
 
 ```bash
-cd ~/.config/launchpad/web && php artisan queue:failed
+docker exec launchpad-horizon php artisan queue:failed
 ```
 
 ### Restart Horizon
 
 ```bash
-sudo supervisorctl restart launchpad-horizon
+docker restart launchpad-horizon
+# Or via CLI:
+launchpad horizon:stop && launchpad horizon:start
 ```
 
 ### Test API Directly
@@ -222,7 +220,7 @@ If API calls return `{"success":false,"error":"Command failed"}`, the command is
 
 ### Horizon Using Wrong Redis Host
 
-If Horizon can't connect to Redis, check the supervisor config has `REDIS_HOST="127.0.0.1"` (not `launchpad-redis`).
+If Horizon cannot connect to Redis, ensure the container is on the launchpad Docker network.
 
 ### Broadcasts Failing
 

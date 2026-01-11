@@ -15,28 +15,26 @@ launchpad php <site> <version>  # Set PHP version
 
 ## Horizon (Queue Worker)
 
-Launchpad includes a web app with Horizon for background job processing. Horizon is managed by **supervisord** for automatic startup and restart on failure.
+Launchpad includes a web app with Horizon for background job processing. Horizon runs in a Docker container (`launchpad-horizon`).
 
 ```bash
 # Check Horizon status
 launchpad horizon:status
+docker ps | grep launchpad-horizon
 
-# View supervisor status
-sudo supervisorctl status launchpad-horizon
-
-# Manual control via supervisor
-sudo supervisorctl restart launchpad-horizon
-sudo supervisorctl stop launchpad-horizon
-sudo supervisorctl start launchpad-horizon
+# Start/Stop Horizon
+launchpad horizon:start
+launchpad horizon:stop
+docker restart launchpad-horizon
 
 # View logs
-tail -f ~/.config/launchpad/logs/horizon.log
+docker logs launchpad-horizon --tail 100 -f
 
 # Access dashboard (when running)
-open https://launchpad.test/horizon
+open https://launchpad.{tld}/horizon
 ```
 
-Supervisord configuration is at `/etc/supervisor/conf.d/launchpad-horizon.conf`.
+Docker configuration is at `~/.config/launchpad/horizon/docker-compose.yml`.
 
 ## Direct Docker Access
 
@@ -49,22 +47,23 @@ docker compose -f ~/.config/launchpad/postgres/docker-compose.yml down
 docker logs -f launchpad-php-83
 docker logs -f launchpad-caddy
 docker logs -f launchpad-redis
+docker logs -f launchpad-horizon
 ```
 
 ## Sites
 
-Paths in config.json are served as {folder}.test (flat namespace, first match wins).
+Paths in config.json are served as {folder}.{tld} (flat namespace, first match wins).
 
 Set PHP version per project:
 
 ```bash
-echo "8.1" > ~/Projects/mysite/.php-version
+echo "8.4" > ~/projects/mysite/.php-version
 ```
 
-Or edit config.json:
+Or via CLI:
 
-```json
-{ "sites": { "mysite": { "php_version": "8.1" } } }
+```bash
+launchpad php mysite 8.4
 ```
 
 Then restart: `launchpad restart`
@@ -81,7 +80,7 @@ Then restart: `launchpad restart`
 - Caddy: ~/.config/launchpad/caddy/Caddyfile
 - Sites: ~/.config/launchpad/config.json
 - DNS: ~/.config/launchpad/dns/Dockerfile
-- Horizon logs: ~/.config/launchpad/logs/horizon.log
+- Horizon: ~/.config/launchpad/horizon/docker-compose.yml
 - Web app: ~/.config/launchpad/web/
 
 ## Troubleshooting
@@ -92,12 +91,12 @@ launchpad status --json | jq .
 
 # Check Horizon specifically
 launchpad horizon:status
-sudo supervisorctl status launchpad-horizon
+docker logs launchpad-horizon --tail 50
 
 # Restart everything
 launchpad restart
-sudo supervisorctl restart launchpad-horizon
 
-# View Horizon logs for errors
-tail -100 ~/.config/launchpad/logs/horizon.log
+# Clear config cache in Horizon container
+docker exec launchpad-horizon php artisan config:clear
+docker restart launchpad-horizon
 ```

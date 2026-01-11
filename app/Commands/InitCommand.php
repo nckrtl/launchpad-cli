@@ -162,8 +162,6 @@ class InitCommand extends Command
             return $result->successful();
         });
 
-        // 12. Configure supervisor for Horizon queue worker
-
         $this->newLine();
         $this->showCompletionMessage($platformService, $configManager);
 
@@ -253,10 +251,6 @@ class InitCommand extends Command
                 fn () => $platformService->installDig(),
                 'Installing dig...'
             ),
-            'supervisor' => spin(
-                fn () => $platformService->installSupervisor(),
-                'Installing Supervisor...'
-            ),
             default => false,
         };
 
@@ -310,29 +304,6 @@ class InitCommand extends Command
         }
 
         return true;
-    }
-
-    protected function configureSupervisor(PlatformService $platformService, ConfigManager $configManager): bool
-    {
-        // Check if supervisor is installed
-        if (! $platformService->hasSupervisor()) {
-            // Try to install it
-            if (! $platformService->installSupervisor()) {
-                return false;
-            }
-        }
-
-        // Check if config already exists
-        if ($platformService->hasLaunchpadHorizonConfig()) {
-            return true;
-        }
-
-        // Get web app path and current user
-        $webAppPath = $configManager->getWebAppPath();
-        $user = getenv('USER') ?: 'launchpad';
-
-        // Install the supervisor config
-        return $platformService->installLaunchpadHorizonConfig($webAppPath, $user);
     }
 
     protected function pullImages(DockerManager $dockerManager): void
