@@ -802,6 +802,17 @@ ssh launchpad@10.8.0.16 "cd ~/projects/test && bun install --no-progress"
 - **Fix:** Made `broadcast()` catch exceptions (non-blocking) so jobs complete even if WebSocket unreachable
 - **Location:** `~/.config/launchpad/web/app/Jobs/CreateProjectJob.php`
 
+**APP_KEY Environment Variable Inheritance (Laravel Bug):**
+- **Issue:** `php artisan key:generate` failed with "No APP_KEY variable was found in the .env file" even though `.env` had `APP_KEY=`
+- **Cause:** When provisioning runs via Horizon, the web app's `APP_KEY` env var is inherited by child processes. Laravel's `key:generate` uses the config value (from env) to build a regex pattern looking for `APP_KEY=base64:xyz...` in `.env`, but the new project's `.env` has `APP_KEY=` (empty), so the regex doesn't match.
+- **Root Cause:** This is a Laravel framework bug - `KeyGenerateCommand::keyReplacementPattern()` uses `$this->laravel['config']['app.key']` instead of reading the `.env` file directly. PR submitted to laravel/framework.
+- **Fix:** Use `env -i` to clear inherited environment before running artisan commands:
+  ```php
+  $command = "env -i HOME={$home} PATH=... php artisan key:generate --force";
+  ```
+- **Location:** `app/Actions/Provision/GenerateAppKey.php`
+- **Why this affects Horizon but not direct CLI:** When you run `launchpad provision` directly from SSH, your shell doesn't have `APP_KEY` set. But Horizon workers inherit the web app's environment (including `APP_KEY`), which then gets passed to the CLI phar and ultimately to `php artisan`.
+
 ## Launchpad Web App & Queue Processing
 
 The CLI includes a Laravel web app (`~/.config/launchpad/web/`) that provides an API for project management and uses Horizon for queue processing.
@@ -1095,3 +1106,350 @@ Both read the same `.env` file, so we use environment variable overrides.
 Environment variables from supervisord override `.env` values because PHP checks actual env vars before loading `.env`.
 
 **Safety net:** Both `CreateProjectJob` and `DeleteProjectJob` wrap `event()` in try/catch to prevent broadcast failures from failing the job.
+
+## Actions Pattern
+
+The provisioning system uses an **Action Pattern** for clean, testable, single-responsibility classes. Each action handles one step of the provisioning process.
+
+### Directory Structure
+
+```
+app/
+├── Actions/
+│   └── Provision/           # Provisioning action classes
+│       ├── BuildAssets.php
+│       ├── CloneRepository.php
+│       ├── ConfigureEnvironment.php
+│       ├── ConfigureTrustedProxies.php
+│       ├── CreateDatabase.php
+│       ├── CreateGitHubRepository.php
+│       ├── ForkRepository.php
+│       ├── GenerateAppKey.php
+│       ├── InstallComposerDependencies.php
+│       ├── InstallNodeDependencies.php
+│       ├── RestartPhpContainer.php
+│       ├── RunMigrations.php
+│       ├── RunPostInstallScripts.php
+│       └── SetPhpVersion.php
+├── Data/
+│   └── Provision/           # DTOs for provisioning
+│       ├── ProvisionContext.php   # Context passed through actions
+│       └── StepResult.php         # Action result (success/failure)
+└── Services/
+    └── ProvisionLogger.php  # Unified logging service
+```
+
+### Core Components
+
+#### ProvisionContext DTO
+
+Immutable context object passed through all provisioning actions:
+
+```php
+use App\Data\Provision\ProvisionContext;
+
+$context = new ProvisionContext(
+    slug: 'my-project',
+    projectPath: '/home/launchpad/projects/my-project',
+    githubRepo: 'user/my-project',      // optional
+    cloneUrl: 'git@github.com:...',     // optional
+    template: 'user/template',          // optional
+    visibility: 'private',              // default: private
+    phpVersion: '8.4',                  // optional, auto-detected
+    dbDriver: 'pgsql',                  // optional: sqlite, pgsql
+    sessionDriver: 'redis',             // optional: file, database, redis
+    cacheDriver: 'redis',               // optional: file, database, redis
+    queueDriver: 'redis',               // optional: sync, database, redis
+    minimal: false,                     // skip npm/build/env/migrations
+    fork: false,                        // fork instead of import
+    displayName: 'My Project',          // optional APP_NAME
+    tld: 'ccc',                         // default: ccc
+);
+
+// Helper methods
+$context->getHomeDir();    // Returns HOME directory
+$context->getPhpEnv();     // Returns env array for Process calls
+```
+
+#### StepResult DTO
+
+Result object returned by all actions:
+
+```php
+use App\Data\Provision\StepResult;
+
+// Success
+return StepResult::success();
+return StepResult::success(['phpVersion' => '8.4']);
+
+// Failure
+return StepResult::failed('Error message');
+
+// Check result
+if ($result->isSuccess()) { ... }
+if ($result->isFailed()) { ... }
+$result->error;  // Error message (null if success)
+$result->data;   // Data array (empty if none)
+```
+
+#### ProvisionLogger Service
+
+Unified logging to file, command output, and Reverb WebSocket:
+
+```php
+use App\Services\ProvisionLogger;
+
+$logger = new ProvisionLogger(
+    broadcaster: $reverbBroadcaster,  // optional
+    command: $this,                   // optional Command instance
+    slug: 'my-project',               // required for log file
+);
+
+$logger->info('Installing dependencies...');
+$logger->warn('npm had warnings');
+$logger->error('Build failed');
+$logger->log('Debug message');  // File only, no command output
+
+// Broadcast status to WebSocket
+$logger->broadcast('installing_composer');
+$logger->broadcast('failed', 'Error details');
+```
+
+Log files are stored at: `~/.config/launchpad/logs/provision/{slug}.log`
+
+### Action Pattern
+
+Each action follows this pattern:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\Provision;
+
+use App\Data\Provision\ProvisionContext;
+use App\Data\Provision\StepResult;
+use App\Services\ProvisionLogger;
+
+final readonly class MyAction
+{
+    public function handle(ProvisionContext $context, ProvisionLogger $logger): StepResult
+    {
+        // Early return if not applicable
+        if (! file_exists("{$context->projectPath}/some-file")) {
+            $logger->info('Skipping - not applicable');
+            return StepResult::success();
+        }
+
+        $logger->info('Doing the thing...');
+
+        // Log details for debugging
+        $logger->log("Working on: {$context->projectPath}");
+
+        // Do work...
+        $result = Process::path($context->projectPath)
+            ->env($context->getPhpEnv())
+            ->timeout(60)
+            ->run('some-command');
+
+        // Log output for debugging
+        $logger->log("Exit code: {$result->exitCode()}");
+        if ($result->errorOutput()) {
+            $logger->log("stderr: {$result->errorOutput()}");
+        }
+
+        if (! $result->successful()) {
+            return StepResult::failed("Command failed: {$result->errorOutput()}");
+        }
+
+        $logger->info('Completed successfully');
+        return StepResult::success(['key' => 'value']);
+    }
+}
+```
+
+### Available Actions
+
+| Action | Purpose | Broadcasts |
+|--------|---------|------------|
+| `CreateGitHubRepository` | Create repo from template | `creating_repo` |
+| `ForkRepository` | Fork an existing repository | `forking` |
+| `CloneRepository` | Clone git repository | `cloning` |
+| `InstallComposerDependencies` | Run composer install | `installing_composer` |
+| `InstallNodeDependencies` | Run npm/bun/yarn/pnpm install | `installing_npm` |
+| `BuildAssets` | Run npm/bun build | `building` |
+| `ConfigureEnvironment` | Set up .env file with drivers | - |
+| `CreateDatabase` | Create PostgreSQL database | - |
+| `GenerateAppKey` | Run php artisan key:generate | - |
+| `RunMigrations` | Run php artisan migrate | - |
+| `RunPostInstallScripts` | Run composer scripts | - |
+| `ConfigureTrustedProxies` | Configure Laravel 11+ proxies | - |
+| `SetPhpVersion` | Detect and set PHP version | - |
+| `RestartPhpContainer` | Restart PHP-FPM container | - |
+
+### Using Actions in Commands
+
+```php
+use App\Actions\Provision\ConfigureEnvironment;
+use App\Actions\Provision\GenerateAppKey;
+
+public function handle(): int
+{
+    $context = new ProvisionContext(...);
+    $logger = new ProvisionLogger(slug: $context->slug);
+
+    // Run action via container
+    $result = app(ConfigureEnvironment::class)->handle($context, $logger);
+    
+    if ($result->isFailed()) {
+        $this->error($result->error);
+        return 1;
+    }
+
+    // Chain actions
+    $result = app(GenerateAppKey::class)->handle($context, $logger);
+    if ($result->isFailed()) {
+        throw new \RuntimeException($result->error);
+    }
+
+    // Access result data
+    $phpVersion = $result->data['phpVersion'] ?? '8.5';
+
+    return 0;
+}
+```
+
+## Testing
+
+### Test Setup
+
+Tests use Pest PHP with isolated test databases and temporary project directories.
+
+**Configuration:**
+- `phpunit.xml` - Sets `LAUNCHPAD_TEST_DB` environment variable
+- `tests/Pest.php` - Helper functions for test setup
+- `tests/database/` - Directory for test SQLite databases
+
+### Helper Functions
+
+```php
+// Create a temporary Laravel project structure
+$projectPath = createTestProject('my-test-project');
+// Creates: /tmp/launchpad-tests/my-test-project/
+// With: .env.example, artisan, composer.json, bootstrap/app.php
+
+// Clean up after test
+deleteDirectory($projectPath);
+
+// Get fresh test database
+$db = testDatabase();
+
+// Clean up all test projects
+cleanupTestProjects();
+```
+
+### Writing Action Tests
+
+```php
+<?php
+
+use App\Actions\Provision\ConfigureEnvironment;
+use App\Data\Provision\ProvisionContext;
+use App\Services\ProvisionLogger;
+
+beforeEach(function () {
+    $this->projectPath = createTestProject('test-env');
+    $this->logger = new ProvisionLogger(slug: 'test-env');
+});
+
+afterEach(function () {
+    deleteDirectory($this->projectPath);
+});
+
+it('configures PostgreSQL database driver', function () {
+    $context = new ProvisionContext(
+        slug: 'test-env',
+        projectPath: $this->projectPath,
+        dbDriver: 'pgsql',
+    );
+    
+    $action = new ConfigureEnvironment();
+    $result = $action->handle($context, $this->logger);
+    
+    expect($result->isSuccess())->toBeTrue();
+    
+    $env = file_get_contents("{$this->projectPath}/.env");
+    expect($env)->toContain('DB_CONNECTION=pgsql');
+    expect($env)->toContain('DB_HOST=launchpad-postgres');
+});
+
+it('fails when .env file cannot be written', function () {
+    // Make directory read-only
+    chmod($this->projectPath, 0444);
+    
+    $context = new ProvisionContext(
+        slug: 'test-env',
+        projectPath: $this->projectPath,
+    );
+    
+    $action = new ConfigureEnvironment();
+    $result = $action->handle($context, $this->logger);
+    
+    expect($result->isFailed())->toBeTrue();
+    
+    // Restore permissions for cleanup
+    chmod($this->projectPath, 0755);
+});
+```
+
+### Running Tests
+
+```bash
+# Run all unit tests
+./vendor/bin/pest tests/Unit
+
+# Run specific test file
+./vendor/bin/pest tests/Unit/ConfigureEnvironmentTest.php
+
+# Run with coverage
+./vendor/bin/pest tests/Unit --coverage
+```
+
+### Test Files
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `ConfigureEnvironmentTest.php` | 12 | .env setup, drivers, Redis |
+| `ConfigureTrustedProxiesTest.php` | 5 | Laravel 11+ trusted proxies |
+| `DatabaseServiceTest.php` | 10 | PHP version storage |
+| `GenerateAppKeyTest.php` | 3 | APP_KEY edge cases |
+| `ProvisionContextTest.php` | 5 | Context DTO |
+| `ProvisionLoggerTest.php` | 6 | Logging service |
+| `SetPhpVersionTest.php` | 7 | PHP version detection |
+| `StepResultTest.php` | 3 | Result DTO |
+
+### Testing Actions That Use Process Facade
+
+Actions that use `Illuminate\Support\Facades\Process` require Laravel to be bootstrapped. For unit tests:
+
+1. **Test edge cases** that don't invoke Process (missing files, validation)
+2. **Use Feature tests** for full integration testing with the CLI
+3. **Mock Process** for specific scenarios (requires TestCase that extends LaravelZero TestCase)
+
+```php
+// Unit test - test validation without Process
+it('skips when no artisan file exists', function () {
+    unlink("{$this->projectPath}/artisan");
+    
+    $action = new GenerateAppKey();
+    $result = $action->handle($this->context, $this->logger);
+    
+    expect($result->isSuccess())->toBeTrue();
+});
+
+// Feature test - full integration (uses real Process)
+it('generates app key in real project', function () {
+    // This would run the actual artisan command
+})->skip('Requires real Laravel project');
+```
