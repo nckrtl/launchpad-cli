@@ -4,3 +4,4 @@
 /.vagrant
 .phpunit.result.cache
 launchpad-cli/
+.box_dump/

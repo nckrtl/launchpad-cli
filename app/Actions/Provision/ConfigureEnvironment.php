@@ -34,7 +34,7 @@ final readonly class ConfigureEnvironment
         $logger->log('.env file size before: '.strlen($env).' bytes');
 
         // Configure APP_NAME
-        $appName = $context->displayName ?: $context->slug;
+        $appName = $context->displayName ?: ucwords(str_replace('-', ' ', $context->slug));
         $env = $this->setEnvValue($env, 'APP_NAME', $appName);
         $logger->log("Set APP_NAME to: {$appName}");
 

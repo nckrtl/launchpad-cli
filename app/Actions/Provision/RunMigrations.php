@@ -21,6 +21,13 @@ final readonly class RunMigrations
             return StepResult::success();
         }
 
+        // Clear config cache to ensure fresh .env values are loaded
+        $logger->info('Clearing config cache...');
+        Process::path($context->projectPath)
+            ->env($context->getPhpEnv())
+            ->timeout(30)
+            ->run('php artisan config:clear');
+
         $logger->info('Running database migrations...');
 
         $result = Process::path($context->projectPath)
