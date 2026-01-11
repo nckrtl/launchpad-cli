@@ -26,7 +26,8 @@
         "web/storage/logs/*",
         "web/storage/framework/cache/*",
         "web/storage/framework/sessions/*",
-        "web/storage/framework/views/*"
+        "web/storage/framework/views/*",
+        "tests"
     ],
     "check-requirements": false
 }
