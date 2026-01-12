@@ -18,7 +18,7 @@ beforeEach(function () {
 it('starts all services successfully', function () {
     $this->caddyfileGenerator->shouldReceive('generate')->once();
     $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
 
     $this->artisan('start')
         ->expectsOutputToContain('Launchpad is running')
@@ -38,7 +38,7 @@ it('reports failure when a service fails to start', function () {
 it('outputs json when --json flag is used', function () {
     $this->caddyfileGenerator->shouldReceive('generate')->once();
     $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
 
     $this->artisan('start --json')
         ->assertExitCode(0);

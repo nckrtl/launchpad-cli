@@ -56,7 +56,7 @@ it('sets APP_NAME from slug when display name is not provided', function () {
     expect($result->isSuccess())->toBeTrue();
 
     $env = file_get_contents("{$this->projectPath}/.env");
-    expect($env)->toContain('APP_NAME=my-cool-project');
+    expect($env)->toContain('APP_NAME="My Cool Project"');
 });
 
 it('sets APP_URL with correct TLD', function () {

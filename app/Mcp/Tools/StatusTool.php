@@ -6,6 +6,7 @@ namespace App\Mcp\Tools;
 
 use App\Services\ConfigManager;
 use App\Services\DockerManager;
+use App\Services\PhpManager;
 use App\Services\SiteScanner;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -25,6 +26,7 @@ final class StatusTool extends Tool
         protected DockerManager $dockerManager,
         protected ConfigManager $configManager,
         protected SiteScanner $siteScanner,
+        protected PhpManager $phpManager,
     ) {}
 
     public function schema(JsonSchema $schema): array
@@ -34,42 +36,49 @@ final class StatusTool extends Tool
 
     public function handle(Request $request): ResponseFactory
     {
-        $services = [
-            'dns' => [
-                'status' => $this->dockerManager->isRunning('launchpad-dns') ? 'running' : 'stopped',
-                'container' => 'launchpad-dns',
-            ],
-            'php-83' => [
-                'status' => $this->dockerManager->isRunning('launchpad-php-83') ? 'running' : 'stopped',
-                'container' => 'launchpad-php-83',
-            ],
-            'php-84' => [
-                'status' => $this->dockerManager->isRunning('launchpad-php-84') ? 'running' : 'stopped',
-                'container' => 'launchpad-php-84',
-            ],
-            'php-85' => [
-                'status' => $this->dockerManager->isRunning('launchpad-php-85') ? 'running' : 'stopped',
-                'container' => 'launchpad-php-85',
-            ],
-            'caddy' => [
-                'status' => $this->dockerManager->isRunning('launchpad-caddy') ? 'running' : 'stopped',
-                'container' => 'launchpad-caddy',
-            ],
-            'postgres' => [
-                'status' => $this->dockerManager->isRunning('launchpad-postgres') ? 'running' : 'stopped',
-                'container' => 'launchpad-postgres',
-            ],
-            'redis' => [
-                'status' => $this->dockerManager->isRunning('launchpad-redis') ? 'running' : 'stopped',
-                'container' => 'launchpad-redis',
-            ],
-            'mailpit' => [
-                'status' => $this->dockerManager->isRunning('launchpad-mailpit') ? 'running' : 'stopped',
-                'container' => 'launchpad-mailpit',
-            ],
-        ];
+        $isUsingFpm = $this->isUsingFpm();
+        $architecture = $isUsingFpm ? 'php-fpm' : 'frankenphp';
 
-        // Add optional services if enabled
+        $services = [];
+
+        // Core services (always Docker containers)
+        $coreServices = ['dns', 'caddy', 'postgres', 'redis', 'mailpit'];
+        foreach ($coreServices as $service) {
+            $container = 'launchpad-'.$service;
+            $services[$service] = [
+                'status' => $this->dockerManager->isRunning($container) ? 'running' : 'stopped',
+                'container' => $container,
+            ];
+        }
+
+        // PHP services - depends on architecture
+        if ($isUsingFpm) {
+            // PHP-FPM on host - check if any FPM processes are running
+            $phpVersions = ['8.3', '8.4', '8.5'];
+            $runningPhpCount = 0;
+            foreach ($phpVersions as $version) {
+                if ($this->phpManager->isRunning($version)) {
+                    $runningPhpCount++;
+                }
+            }
+            $services['php-fpm'] = [
+                'status' => $runningPhpCount > 0 ? 'running' : 'stopped',
+                'type' => 'host-process',
+                'versions_running' => $runningPhpCount,
+            ];
+        } else {
+            // FrankenPHP Docker containers
+            $phpVersions = ['83', '84', '85'];
+            foreach ($phpVersions as $version) {
+                $container = "launchpad-php-{$version}";
+                $services["php-{$version}"] = [
+                    'status' => $this->dockerManager->isRunning($container) ? 'running' : 'stopped',
+                    'container' => $container,
+                ];
+            }
+        }
+
+        // Optional services
         if ($this->configManager->isServiceEnabled('reverb')) {
             $services['reverb'] = [
                 'status' => $this->dockerManager->isRunning('launchpad-reverb') ? 'running' : 'stopped',
@@ -92,6 +101,7 @@ final class StatusTool extends Tool
 
         return Response::structured([
             'running' => $running,
+            'architecture' => $architecture,
             'services' => $services,
             'services_running' => $runningCount,
             'services_total' => $totalCount,
@@ -100,5 +110,18 @@ final class StatusTool extends Tool
             'tld' => $this->configManager->getTld(),
             'default_php_version' => $this->configManager->getDefaultPhpVersion(),
         ]);
+    }
+
+    private function isUsingFpm(): bool
+    {
+        // Check if any FPM socket exists
+        $versions = ['8.2', '8.3', '8.4', '8.5'];
+        foreach ($versions as $version) {
+            if (file_exists($this->phpManager->getSocketPath($version))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

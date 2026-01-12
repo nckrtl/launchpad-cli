@@ -9,29 +9,38 @@ class CaddyfileGenerator
 {
     protected string $caddyfilePath;
 
-    protected string $phpCaddyfilePath;
-
     public function __construct(
         protected ConfigManager $configManager,
         protected SiteScanner $siteScanner,
+        protected ?PhpManager $phpManager = null,
         protected ?WorktreeService $worktreeService = null
     ) {
         $this->caddyfilePath = $this->configManager->getConfigPath().'/caddy/Caddyfile';
-        $this->phpCaddyfilePath = $this->configManager->getConfigPath().'/php/Caddyfile';
+    }
+
+    /**
+     * Get the PHP-FPM socket path for a version.
+     */
+    protected function getSocketPath(string $version): string
+    {
+        if ($this->phpManager === null) {
+            $this->phpManager = app(PhpManager::class);
+        }
+
+        return $this->phpManager->getSocketPath($version);
     }
 
     public function generate(): void
     {
         $this->generateCaddyfile();
-        $this->generatePhpCaddyfile();
     }
 
     protected function generateCaddyfile(): void
     {
         $sites = $this->siteScanner->scanSites();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
-        $defaultPhpContainer = $this->getContainerName($defaultPhp);
         $tld = $this->configManager->get('tld') ?: 'test';
+        $defaultSocket = $this->getSocketPath($defaultPhp);
 
         $caddyfile = '{
     local_certs
@@ -44,21 +53,39 @@ class CaddyfileGenerator
         if (is_dir($webAppPath)) {
             $caddyfile .= "launchpad.{$tld} {
     tls internal
-    reverse_proxy {$defaultPhpContainer}:8080
+    root * {$webAppPath}/public
+    encode gzip
+    php_fastcgi unix/{$defaultSocket}
+    file_server
 }
 
 ";
         }
 
-        // Generate explicit entry for each site (wildcard certs don't work in browsers)
+        // Generate entry for each site
         foreach ($sites as $site) {
-            $container = $site['has_custom_php']
-                ? $this->getContainerName($site['php_version'])
-                : $defaultPhpContainer;
+            $socket = $site['has_custom_php']
+                ? $this->getSocketPath($site['php_version'])
+                : $defaultSocket;
+            $root = $site['path'].'/public';
 
             $caddyfile .= "{$site['domain']} {
     tls internal
-    reverse_proxy {$container}:8080
+    root * {$root}
+    encode gzip
+
+    # Vite dev server proxy
+    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/* /__devtools__/*
+    reverse_proxy @vite localhost:5173
+
+    @ws {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @ws localhost:5173
+
+    php_fastcgi unix/{$socket}
+    file_server
 }
 
 ";
@@ -67,11 +94,15 @@ class CaddyfileGenerator
         // Generate entries for worktrees
         $worktrees = $this->getWorktreesForCaddy();
         foreach ($worktrees as $worktree) {
-            $container = $this->getContainerName($worktree['php_version']);
+            $socket = $this->getSocketPath($worktree['php_version']);
+            $root = $worktree['path'].'/public';
 
             $caddyfile .= "{$worktree['domain']} {
     tls internal
-    reverse_proxy {$container}:8080
+    root * {$root}
+    encode gzip
+    php_fastcgi unix/{$socket}
+    file_server
 }
 
 ";
@@ -86,159 +117,49 @@ class CaddyfileGenerator
         header Connection *Upgrade*
         header Upgrade websocket
     }
-    reverse_proxy @websocket launchpad-reverb:6001
-    reverse_proxy launchpad-reverb:6001
+    reverse_proxy @websocket localhost:6001
+    reverse_proxy localhost:6001
 }
 
 ";
         }
+
         File::put($this->caddyfilePath, $caddyfile);
-    }
-
-    protected function generatePhpCaddyfile(): void
-    {
-        $sites = $this->siteScanner->scanSites();
-        $paths = $this->configManager->getPaths();
-        $tld = $this->configManager->get('tld') ?: 'test';
-
-        $caddyfile = '{
-    frankenphp
-    order php_server before file_server
-    auto_https off
-}
-
-';
-
-        // Add launchpad management UI site
-        $webAppPath = $this->configManager->getWebAppPath();
-        if (is_dir($webAppPath)) {
-            // The web app is mounted at /launchpad-web inside the container
-            $caddyfile .= "http://launchpad.{$tld}:8080 {
-    root * /launchpad-web/public
-    php_server
-}
-
-";
-        }
-
-        foreach ($sites as $site) {
-            $dockerPath = $this->getDockerPath($site['path'], $paths);
-            $root = $this->getDocumentRoot($dockerPath);
-
-            $caddyfile .= "http://{$site['domain']}:8080 {\n";
-            $caddyfile .= "    root * {$root}\n";
-
-            // Always include Vite proxy - works when Vite is running, fails gracefully when not
-            $caddyfile .= "\n";
-            $caddyfile .= "    @vite path /@vite/* /@id/* /@fs/* /resources/* /node_modules/* /lang/* /__devtools__/*\n";
-            $caddyfile .= "    reverse_proxy @vite 172.18.0.1:5173\n";
-            $caddyfile .= "\n";
-            $caddyfile .= "    @ws {\n";
-            $caddyfile .= "        header Connection *Upgrade*\n";
-            $caddyfile .= "        header Upgrade websocket\n";
-            $caddyfile .= "    }\n";
-            $caddyfile .= "    reverse_proxy @ws 172.18.0.1:5173\n";
-            $caddyfile .= "\n";
-
-            // Use php_server without workers (classic mode) for robustness
-            // Each request bootstraps PHP fresh - slower but prevents cross-site pollution
-            // and handles broken projects gracefully
-            $caddyfile .= "    php_server\n";
-            $caddyfile .= "}\n\n";
-        }
-
-        // Generate entries for worktrees
-        $worktrees = $this->getWorktreesForCaddy();
-        foreach ($worktrees as $worktree) {
-            // Worktrees are typically outside the configured paths, so we need
-            // to mount them separately. For now, we'll use a direct path mapping.
-            $dockerPath = $this->getWorktreeDockerPath($worktree['path']);
-            $root = $this->getDocumentRoot($dockerPath);
-
-            // Use php_server without workers for worktrees too
-            $caddyfile .= "http://{$worktree['domain']}:8080 {
-    root * {$root}
-    php_server
-}
-
-";
-        }
-
-        File::put($this->phpCaddyfilePath, $caddyfile);
-    }
-
-    protected function getDockerPath(string $hostPath, array $configPaths): string
-    {
-        // Docker mounts paths at the same location, so no conversion needed
-        // PhpComposeGenerator mounts {expandedPath}:{expandedPath}
-        return $hostPath;
-    }
-
-    protected function getWorktreeDockerPath(string $hostPath): string
-    {
-        // Worktrees are mounted at /worktrees in the container
-        // /var/tmp/vibe-kanban/worktrees/task-id/project -> /worktrees/task-id/project
-        if (str_starts_with($hostPath, '/var/tmp/vibe-kanban/worktrees/')) {
-            $relativePath = substr($hostPath, strlen('/var/tmp/vibe-kanban/worktrees/'));
-
-            return "/worktrees/{$relativePath}";
-        }
-
-        // Fallback: try to use the path directly
-        return $hostPath;
-    }
-
-    protected function getDocumentRoot(string $basePath): string
-    {
-        // Check if it's a Laravel app (has public directory)
-        // We'll assume public exists if there's a public folder
-        return "{$basePath}/public";
-    }
-
-    protected function expandPath(string $path): string
-    {
-        if (str_starts_with($path, '~/')) {
-            return $_SERVER['HOME'].substr($path, 1);
-        }
-
-        return $path;
     }
 
     public function reload(): bool
     {
-        $result = Process::run('docker exec launchpad-caddy caddy reload --config /etc/caddy/Caddyfile');
+        // Reload host Caddy service
+        $result = Process::run('sudo systemctl reload caddy');
 
         return $result->successful();
     }
 
     public function reloadPhp(): bool
     {
-        $result83 = Process::run('docker exec launchpad-php-83 frankenphp reload --config /etc/frankenphp/Caddyfile 2>/dev/null');
-        $result84 = Process::run('docker exec launchpad-php-84 frankenphp reload --config /etc/frankenphp/Caddyfile 2>/dev/null');
+        // Restart PHP-FPM pools
+        $versions = ['8.3', '8.4'];
+        $success = false;
+        foreach ($versions as $version) {
+            $normalized = str_replace('.', '', $version);
+            $result = Process::run("sudo systemctl restart php{$version}-fpm 2>/dev/null");
+            if ($result->successful()) {
+                $success = true;
+            }
+        }
 
-        $result85 = Process::run('docker exec launchpad-php-85 frankenphp reload --config /etc/frankenphp/Caddyfile 2>/dev/null');
-
-        return $result83->successful() || $result84->successful() || $result85->successful();
-    }
-
-    protected function getContainerName(string $version): string
-    {
-        $versionNumber = str_replace('.', '', $version);
-
-        return "launchpad-php-{$versionNumber}";
+        return $success;
     }
 
     protected function getWorktreesForCaddy(): array
     {
         if ($this->worktreeService === null) {
-            // Lazy load to avoid circular dependency
             $this->worktreeService = app(WorktreeService::class);
         }
 
         try {
             return $this->worktreeService->getLinkedWorktreesForCaddy();
         } catch (\Exception) {
-            // If worktree service fails, return empty array
             return [];
         }
     }

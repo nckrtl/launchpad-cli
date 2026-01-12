@@ -43,7 +43,8 @@ final class ProvisionCommand extends Command
         {--queue-driver= : Queue driver (sync, database, redis)}
         {--minimal : Only run composer install, skip npm/build/env/migrations}
         {--name= : Display name for APP_NAME (defaults to slug)}
-        {--fork : Fork the repository instead of importing as new}';
+        {--fork : Fork the repository instead of importing as new}
+        {--json : Output as JSON (for programmatic use)}';
 
     protected $description = 'Provision a project (create repo, clone, setup, register with orchestrator)';
 

@@ -3,8 +3,10 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
+use App\Services\CaddyManager;
 use App\Services\ConfigManager;
 use App\Services\DockerManager;
+use App\Services\HorizonManager;
 use App\Services\PhpManager;
 use App\Services\SiteScanner;
 use LaravelZero\Framework\Commands\Command;
@@ -21,20 +23,91 @@ class StatusCommand extends Command
         DockerManager $dockerManager,
         ConfigManager $configManager,
         SiteScanner $siteScanner,
-        PhpManager $phpManager
+        PhpManager $phpManager,
+        CaddyManager $caddyManager,
+        HorizonManager $horizonManager
     ): int {
-        // Single batched query for all container statuses
-        $allStatuses = $dockerManager->getAllStatuses();
+        // Detect architecture
+        $isUsingFpm = $this->isUsingFpm($phpManager);
+        $architecture = $isUsingFpm ? 'php-fpm' : 'frankenphp';
 
         $services = [];
         $runningCount = 0;
         $healthyCount = 0;
 
-        foreach ($allStatuses as $name => $status) {
+        if ($isUsingFpm) {
+            // PHP-FPM Architecture - check host services
+
+            // Check PHP-FPM pools
+            $phpRunning = false;
+            $phpVersions = [];
+            foreach (['8.3', '8.4'] as $version) {
+                if ($phpManager->isInstalled($version)) {
+                    $running = $phpManager->isRunning($version);
+                    $phpVersions[$version] = $running;
+                    if ($running) {
+                        $phpRunning = true;
+                    }
+                }
+            }
+
+            foreach ($phpVersions as $version => $running) {
+                $normalized = str_replace('.', '', $version);
+                $services["php-{$normalized}"] = [
+                    'status' => $running ? 'running' : 'stopped',
+                    'health' => $running ? 'healthy' : null,
+                    'container' => null,
+                    'type' => 'php-fpm',
+                ];
+                if ($running) {
+                    $runningCount++;
+                    $healthyCount++;
+                }
+            }
+
+            // Check host Caddy
+            $caddyRunning = $caddyManager->isRunning();
+            $services['caddy'] = [
+                'status' => $caddyRunning ? 'running' : 'stopped',
+                'health' => $caddyRunning ? 'healthy' : null,
+                'container' => null,
+                'type' => 'host',
+            ];
+            if ($caddyRunning) {
+                $runningCount++;
+                $healthyCount++;
+            }
+
+            // Check Horizon service
+            $horizonRunning = $horizonManager->isRunning();
+            $services['horizon'] = [
+                'status' => $horizonRunning ? 'running' : 'stopped',
+                'health' => $horizonRunning ? 'healthy' : null,
+                'container' => null,
+                'type' => 'systemd',
+            ];
+            if ($horizonRunning) {
+                $runningCount++;
+                $healthyCount++;
+            }
+
+            // Docker services that remain containerized
+            $dockerServices = ['dns', 'postgres', 'redis', 'mailpit', 'reverb'];
+        } else {
+            // FrankenPHP Architecture - all Docker
+            $dockerServices = ['dns', 'php-83', 'php-84', 'php-85', 'caddy', 'postgres', 'redis', 'mailpit', 'horizon', 'reverb'];
+        }
+
+        // Query Docker container statuses
+        $allStatuses = $dockerManager->getAllStatuses();
+
+        foreach ($dockerServices as $name) {
+            $status = $allStatuses[$name] ?? ['running' => false, 'health' => null, 'container' => "launchpad-{$name}"];
             $services[$name] = [
                 'status' => $status['running'] ? 'running' : 'stopped',
                 'health' => $status['health'],
                 'container' => $status['container'],
+                'type' => 'docker',
             ];
 
             if ($status['running']) {
@@ -48,10 +121,6 @@ class StatusCommand extends Command
         $sites = $siteScanner->scan();
         $isRunning = $runningCount > 0;
 
-        // Detect architecture
-        $isUsingFpm = $this->isUsingFpm($phpManager);
-        $architecture = $isUsingFpm ? 'php-fpm' : 'frankenphp';
-
         if ($this->wantsJson()) {
             return $this->outputJsonSuccess([
                 'running' => $isRunning,
@@ -59,7 +128,7 @@ class StatusCommand extends Command
                 'services' => $services,
                 'services_running' => $runningCount,
                 'services_healthy' => $healthyCount,
-                'services_total' => count($allStatuses),
+                'services_total' => count($services),
                 'sites_count' => count($sites),
                 'config_path' => $configManager->getConfigPath(),
                 'tld' => $configManager->getTld(),
@@ -73,7 +142,7 @@ class StatusCommand extends Command
         $this->newLine();
 
         if ($isRunning) {
-            $this->info("  Launchpad is running ({$runningCount}/".count($allStatuses).' services)');
+            $this->info("  Launchpad is running ({$runningCount}/".count($services).' services)');
         } else {
             $this->warn('  Launchpad is stopped');
         }
@@ -108,7 +177,7 @@ class StatusCommand extends Command
             'healthy' => '<fg=green>●</>',
             'unhealthy' => '<fg=red>●</>',
             'starting' => '<fg=yellow>●</>',
-            default => '<fg=green>●</>', // Running but no healthcheck
+            default => '<fg=green>●</>',
         };
     }
 
@@ -124,8 +193,7 @@ class StatusCommand extends Command
 
     private function isUsingFpm(PhpManager $phpManager): bool
     {
-        // Check if any FPM socket exists
-        $versions = ['8.2', '8.3', '8.4', '8.5'];
+        $versions = ['8.3', '8.4'];
         foreach ($versions as $version) {
             if (file_exists($phpManager->getSocketPath($version))) {
                 return true;

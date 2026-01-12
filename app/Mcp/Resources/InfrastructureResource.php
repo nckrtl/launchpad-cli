@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Mcp\Resources;
 
+use App\Services\ConfigManager;
 use App\Services\DockerManager;
+use App\Services\PhpManager;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Resource;
@@ -15,23 +17,11 @@ class InfrastructureResource extends Resource
 
     protected string $mimeType = 'application/json';
 
-    protected array $containers = [
-        'dns' => 'launchpad-dns',
-        'php-83' => 'launchpad-php-83',
-        'php-84' => 'launchpad-php-84',
-        'php-85' => 'launchpad-php-85',
-        'caddy' => 'launchpad-caddy',
-        'postgres' => 'launchpad-postgres',
-        'redis' => 'launchpad-redis',
-        'mailpit' => 'launchpad-mailpit',
-        'reverb' => 'launchpad-reverb',
-        'horizon' => 'launchpad-horizon',
-    ];
-
-    public function __construct(protected DockerManager $dockerManager)
-    {
-        //
-    }
+    public function __construct(
+        protected DockerManager $dockerManager,
+        protected ConfigManager $configManager,
+        protected PhpManager $phpManager,
+    ) {}
 
     public function name(): string
     {
@@ -45,19 +35,30 @@ class InfrastructureResource extends Resource
 
     public function description(): string
     {
-        return 'All running Docker services with their status, health, container names, and ports.';
+        return 'All running services with their status, health, and ports. Supports both PHP-FPM and FrankenPHP architectures.';
     }
 
     public function handle(Request $request): Response
     {
+        $isUsingFpm = $this->isUsingFpm();
+        $architecture = $isUsingFpm ? 'php-fpm' : 'frankenphp';
+
         $services = [];
         $runningCount = 0;
         $healthyCount = 0;
 
-        foreach ($this->containers as $name => $container) {
+        // Core Docker containers (same for both architectures)
+        $coreContainers = [
+            'dns' => 'launchpad-dns',
+            'caddy' => 'launchpad-caddy',
+            'postgres' => 'launchpad-postgres',
+            'redis' => 'launchpad-redis',
+            'mailpit' => 'launchpad-mailpit',
+        ];
+
+        foreach ($coreContainers as $name => $container) {
             $isRunning = $this->dockerManager->isRunning($container);
             $health = $isRunning ? $this->dockerManager->getHealthStatus($container) : null;
-
             $ports = $this->getContainerPorts($container);
 
             $services[$name] = [
@@ -65,6 +66,7 @@ class InfrastructureResource extends Resource
                 'status' => $isRunning ? 'running' : 'stopped',
                 'health' => $health,
                 'ports' => $ports,
+                'type' => 'docker',
             ];
 
             if ($isRunning) {
@@ -75,13 +77,92 @@ class InfrastructureResource extends Resource
             }
         }
 
+        // PHP services - depends on architecture
+        if ($isUsingFpm) {
+            // PHP-FPM on host
+            $phpVersions = ['8.3', '8.4', '8.5'];
+            $phpServices = [];
+            foreach ($phpVersions as $version) {
+                $isRunning = $this->phpManager->isRunning($version);
+                $socketPath = $this->phpManager->getSocketPath($version);
+                $phpServices[$version] = [
+                    'running' => $isRunning,
+                    'socket' => $socketPath,
+                    'socket_exists' => file_exists($socketPath),
+                ];
+                if ($isRunning) {
+                    $runningCount++;
+                    $healthyCount++;
+                }
+            }
+
+            $services['php-fpm'] = [
+                'type' => 'host-process',
+                'status' => count(array_filter($phpServices, fn ($s) => $s['running'])) > 0 ? 'running' : 'stopped',
+                'versions' => $phpServices,
+            ];
+        } else {
+            // FrankenPHP Docker containers
+            $phpContainers = [
+                'php-83' => 'launchpad-php-83',
+                'php-84' => 'launchpad-php-84',
+                'php-85' => 'launchpad-php-85',
+            ];
+
+            foreach ($phpContainers as $name => $container) {
+                $isRunning = $this->dockerManager->isRunning($container);
+                $health = $isRunning ? $this->dockerManager->getHealthStatus($container) : null;
+
+                $services[$name] = [
+                    'container' => $container,
+                    'status' => $isRunning ? 'running' : 'stopped',
+                    'health' => $health,
+                    'ports' => ['9000/tcp'],
+                    'type' => 'docker',
+                ];
+
+                if ($isRunning) {
+                    $runningCount++;
+                    if ($health === 'healthy' || $health === null) {
+                        $healthyCount++;
+                    }
+                }
+            }
+        }
+
+        // Optional services
+        $optionalServices = ['reverb', 'horizon'];
+        foreach ($optionalServices as $service) {
+            if ($this->configManager->isServiceEnabled($service)) {
+                $container = "launchpad-{$service}";
+                $isRunning = $this->dockerManager->isRunning($container);
+                $health = $isRunning ? $this->dockerManager->getHealthStatus($container) : null;
+
+                $services[$service] = [
+                    'container' => $container,
+                    'status' => $isRunning ? 'running' : 'stopped',
+                    'health' => $health,
+                    'ports' => $this->getContainerPorts($container),
+                    'type' => 'docker',
+                ];
+
+                if ($isRunning) {
+                    $runningCount++;
+                    if ($health === 'healthy' || $health === null) {
+                        $healthyCount++;
+                    }
+                }
+            }
+        }
+
         return Response::json([
+            'architecture' => $architecture,
             'services' => $services,
             'summary' => [
-                'total' => count($this->containers),
+                'total' => count($services),
                 'running' => $runningCount,
                 'healthy' => $healthyCount,
-                'stopped' => count($this->containers) - $runningCount,
+                'stopped' => count($services) - $runningCount,
             ],
         ]);
     }
@@ -90,9 +171,6 @@ class InfrastructureResource extends Resource
     {
         $portsMap = [
             'launchpad-dns' => ['53/udp', '53/tcp'],
-            'launchpad-php-83' => ['9000/tcp'],
-            'launchpad-php-84' => ['9000/tcp'],
-            'launchpad-php-85' => ['9000/tcp'],
             'launchpad-caddy' => ['80/tcp', '443/tcp'],
             'launchpad-postgres' => ['5432/tcp'],
             'launchpad-redis' => ['6379/tcp'],
@@ -102,5 +180,18 @@ class InfrastructureResource extends Resource
         ];
 
         return $portsMap[$container] ?? [];
+    }
+
+    private function isUsingFpm(): bool
+    {
+        // Check if any FPM socket exists
+        $versions = ['8.2', '8.3', '8.4', '8.5'];
+        foreach ($versions as $version) {
+            if (file_exists($this->phpManager->getSocketPath($version))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -17,10 +17,16 @@ beforeEach(function () {
     $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
     $this->configManager->shouldReceive('get')->with('paths', ['~/projects'])->andReturn([$this->tempDir]);
     $this->app->instance(ConfigManager::class, $this->configManager);
+
+    // Set HOME to temp for ProvisionLogger
+    $_SERVER['HOME'] = '/tmp';
+    @mkdir('/tmp/.config/launchpad/logs/provision', 0755, true);
 });
 
 afterEach(function () {
     \Illuminate\Support\Facades\File::deleteDirectory($this->tempDir);
+    // Clean up log files
+    @unlink('/tmp/.config/launchpad/logs/provision/test-project.log');
 });
 
 it('runs project:create command with repo argument', function () {

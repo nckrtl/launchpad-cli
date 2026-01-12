@@ -13,6 +13,7 @@ use App\Mcp\Tools\WorktreesTool;
 use App\Services\ConfigManager;
 use App\Services\DatabaseService;
 use App\Services\DockerManager;
+use App\Services\PhpManager;
 use App\Services\SiteScanner;
 use App\Services\WorktreeService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -26,12 +27,14 @@ beforeEach(function () {
     $this->siteScanner = Mockery::mock(SiteScanner::class);
     $this->databaseService = Mockery::mock(DatabaseService::class);
     $this->worktreeService = Mockery::mock(WorktreeService::class);
+    $this->phpManager = Mockery::mock(PhpManager::class);
 
     $this->app->instance(ConfigManager::class, $this->configManager);
     $this->app->instance(DockerManager::class, $this->dockerManager);
     $this->app->instance(SiteScanner::class, $this->siteScanner);
     $this->app->instance(DatabaseService::class, $this->databaseService);
     $this->app->instance(WorktreeService::class, $this->worktreeService);
+    $this->app->instance(PhpManager::class, $this->phpManager);
 });
 
 describe('StatusTool', function () {
@@ -45,6 +48,8 @@ describe('StatusTool', function () {
         $this->configManager->shouldReceive('getTld')->andReturn('test');
         $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
         $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);
+        // Mock PHP-FPM detection (returns false = FrankenPHP mode)
+        $this->phpManager->shouldReceive('getSocketPath')->andReturn('/tmp/nonexistent.sock');
 
         $tool = app(StatusTool::class);
         $request = new Request([]);

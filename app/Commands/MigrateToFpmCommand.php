@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
+use App\Services\CaddyfileGenerator;
 use App\Services\CaddyManager;
 use App\Services\DockerManager;
 use App\Services\HorizonManager;
@@ -23,14 +24,18 @@ class MigrateToFpmCommand extends Command
     public function handle(
         PhpManager $phpManager,
         CaddyManager $caddyManager,
+        CaddyfileGenerator $caddyfileGenerator,
         HorizonManager $horizonManager,
         DockerManager $dockerManager
     ): int {
         // Detect current setup
         $usingFpm = $this->isUsingFpm($phpManager);
-        $usingFrankenPhp = $dockerManager->isRunning('launchpad-php-84')
-            || $dockerManager->isRunning('launchpad-php-83')
-            || $dockerManager->isRunning('launchpad-php-82');
+
+        // Check if FrankenPHP containers exist (running OR stopped)
+        $usingFrankenPhp = $dockerManager->containerExists('launchpad-php-84')
+            || $dockerManager->containerExists('launchpad-php-83')
+            || $dockerManager->containerExists('launchpad-php-82')
+            || $dockerManager->containerExists('launchpad-caddy');
 
         if ($usingFpm && ! $usingFrankenPhp) {
             return $this->outputResult(['success' => true, 'message' => 'Already using PHP-FPM']);
@@ -69,40 +74,36 @@ class MigrateToFpmCommand extends Command
         });
 
         // 5. Regenerate Caddyfile for FPM sockets
-        $this->task('Regenerating Caddyfile', function () {
-            // This triggers Caddyfile regeneration
-            $this->call('caddy:reload');
+        $this->task('Regenerating Caddyfile', function () use ($caddyfileGenerator) {
+            $caddyfileGenerator->generate();
 
             return true;
         });
 
-        // 6. Setup Horizon service
+        // 6. Reload Caddy with new config
+        $this->task('Reloading Caddy', fn () => $caddyManager->reload());
+
+        // 7. Setup Horizon service
         $this->task('Installing Horizon service', fn () => $horizonManager->install());
 
-        // 7. Remove old containers (unless --keep-containers)
+        // 8. Remove old containers (unless --keep-containers)
         if (! $this->option('keep-containers')) {
             $this->task('Removing old PHP containers', function () use ($dockerManager) {
-                $containers = ['launchpad-php-82', 'launchpad-php-83', 'launchpad-php-84', 'launchpad-php-85'];
+                $containers = ['launchpad-php-82', 'launchpad-php-83', 'launchpad-php-84', 'launchpad-php-85', 'launchpad-caddy', 'launchpad-horizon'];
                 foreach ($containers as $container) {
-                    if ($dockerManager->isRunning($container)) {
-                        $dockerManager->stop($container);
+                    if ($dockerManager->containerExists($container)) {
+                        if ($dockerManager->isRunning($container)) {
+                            $dockerManager->stop($container);
+                        }
+                        $dockerManager->removeContainer($container);
                     }
-                    $dockerManager->removeContainer($container);
-                }
-
-                // Also remove the old Caddy container if present
-                if ($dockerManager->containerExists('launchpad-caddy')) {
-                    if ($dockerManager->isRunning('launchpad-caddy')) {
-                        $dockerManager->stop('caddy');
-                    }
-                    $dockerManager->removeContainer('launchpad-caddy');
                 }
 
                 return true;
             });
         }
 
-        // 8. Start new services
+        // 9. Start new services
         $this->task('Starting services', fn () => $this->call('start') === 0);
 
         return $this->outputResult([
@@ -130,7 +131,7 @@ class MigrateToFpmCommand extends Command
     private function isUsingFpm(PhpManager $phpManager): bool
     {
         // Check if any FPM socket exists
-        $versions = ['8.2', '8.3', '8.4', '8.5'];
+        $versions = ['8.2', '8.3', '8.4'];
         foreach ($versions as $version) {
             if (file_exists($phpManager->getSocketPath($version))) {
                 return true;
@@ -142,7 +143,7 @@ class MigrateToFpmCommand extends Command
 
     private function ensurePhpInstalled(PhpManager $phpManager): bool
     {
-        $versions = ['8.3', '8.4', '8.5'];
+        $versions = ['8.3', '8.4'];
         foreach ($versions as $version) {
             if (! $phpManager->isInstalled($version)) {
                 if (! $phpManager->install($version)) {
@@ -156,7 +157,7 @@ class MigrateToFpmCommand extends Command
 
     private function configurePools(PhpManager $phpManager): bool
     {
-        $versions = ['8.3', '8.4', '8.5'];
+        $versions = ['8.3', '8.4'];
         foreach ($versions as $version) {
             if ($phpManager->isInstalled($version)) {
                 $phpManager->configurePool($version);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\CaddyfileGenerator;
 use App\Services\ConfigManager;
 use Illuminate\Support\Facades\Http;
 
@@ -13,6 +14,21 @@ beforeEach(function () {
     $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
     $this->configManager->shouldReceive('get')->with('paths', [])->andReturn(['/tmp/projects']);
     $this->app->instance(ConfigManager::class, $this->configManager);
+
+    $this->caddyfileGenerator = Mockery::mock(CaddyfileGenerator::class);
+    $this->caddyfileGenerator->shouldReceive('generate')->andReturn(true);
+    $this->caddyfileGenerator->shouldReceive('reload')->andReturn(true);
+    $this->app->instance(CaddyfileGenerator::class, $this->caddyfileGenerator);
+
+    // Set HOME to temp for DeletionLogger
+    $_SERVER['HOME'] = '/tmp';
+    @mkdir('/tmp/.config/launchpad/logs/deletion', 0755, true);
+});
+
+afterEach(function () {
+    // Clean up log files
+    @unlink('/tmp/.config/launchpad/logs/deletion/test-project.log');
+    @unlink('/tmp/.config/launchpad/logs/deletion/nonexistent.log');
 });
 
 it('deletes project via MCP when given slug with --force', function () {
@@ -40,7 +56,7 @@ it('deletes project via MCP when given slug with --force', function () {
     });
 });
 
-it('handles MCP error response', function () {
+it('handles MCP error response with warning and continues', function () {
     Http::fake([
         'localhost:8000/mcp' => Http::response([
             'jsonrpc' => '2.0',
@@ -49,15 +65,17 @@ it('handles MCP error response', function () {
         ]),
     ]);
 
+    // Command should succeed but with warnings - MCP errors are non-fatal
     $this->artisan('project:delete', ['slug' => 'nonexistent', '--force' => true, '--json' => true])
-        ->assertFailed();
+        ->assertExitCode(0);
 });
 
-it('handles connection error', function () {
+it('handles connection error with warning and continues', function () {
     Http::fake([
         'localhost:8000/mcp' => Http::response(status: 500),
     ]);
 
+    // Command should succeed but with warnings - connection errors are non-fatal
     $this->artisan('project:delete', ['slug' => 'test-project', '--force' => true, '--json' => true])
-        ->assertFailed();
+        ->assertExitCode(0);
 });

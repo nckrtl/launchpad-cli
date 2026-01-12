@@ -4,7 +4,10 @@ namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
+use App\Services\CaddyManager;
 use App\Services\DockerManager;
+use App\Services\HorizonManager;
+use App\Services\PhpManager;
 use LaravelZero\Framework\Commands\Command;
 
 class StopCommand extends Command
@@ -15,38 +18,80 @@ class StopCommand extends Command
 
     protected $description = 'Stop all Launchpad services';
 
-    public function handle(DockerManager $dockerManager): int
-    {
+    public function handle(
+        DockerManager $dockerManager,
+        PhpManager $phpManager,
+        CaddyManager $caddyManager,
+        HorizonManager $horizonManager
+    ): int {
         $results = [];
-        $allSuccess = true;
+        $usingFpm = $this->isUsingFpm($phpManager);
 
-        // Stop services in reverse order
-        $services = ['horizon', 'caddy', 'mailpit', 'redis', 'postgres', 'php', 'dns'];
+        // Stop Horizon first
+        if ($usingFpm) {
+            $result = $this->runStep('horizon', 'Stopping horizon', fn () => $horizonManager->stop());
+        } else {
+            $result = $this->runStep('horizon', 'Stopping horizon', fn () => $dockerManager->stop('horizon'));
+        }
+        $results['horizon'] = $result;
 
+        if ($usingFpm) {
+            // Stop host Caddy
+            $result = $this->runStep('caddy', 'Stopping caddy', fn () => $caddyManager->stop());
+            $results['caddy'] = $result;
+
+            // Note: We don"t stop PHP-FPM pools to keep them available for other projects
+            // Just stop the Docker services
+        } else {
+            // FrankenPHP Architecture
+            $result = $this->runStep('caddy', 'Stopping caddy', fn () => $dockerManager->stop('caddy'));
+            $results['caddy'] = $result;
+
+            $result = $this->runStep('php', 'Stopping php', fn () => $dockerManager->stop('php'));
+            $results['php'] = $result;
+        }
+
+        // Stop other Docker services
+        $services = ['mailpit', 'redis', 'postgres'];
         foreach ($services as $service) {
             $result = $this->runStep($service, "Stopping {$service}", fn () => $dockerManager->stop($service));
             $results[$service] = $result;
-            $allSuccess = $allSuccess && $result;
         }
+
+        // Stop DNS last
+        $result = $this->runStep('dns', 'Stopping dns', fn () => $dockerManager->stop('dns'));
+        $results['dns'] = $result;
+
+        $allSuccess = ! in_array(false, $results, true);
 
         if ($this->wantsJson()) {
             return $this->outputJson([
                 'success' => $allSuccess,
                 'data' => [
                     'action' => 'stop',
+                    'architecture' => $usingFpm ? 'php-fpm' : 'frankenphp',
                     'services' => $results,
                 ],
             ], $allSuccess ? self::SUCCESS : ExitCode::ServiceFailed->value);
         }
 
         $this->newLine();
-        if ($allSuccess) {
-            $this->info('Launchpad stopped.');
-        } else {
-            $this->warn('Some services failed to stop.');
-        }
+        $this->info('Launchpad stopped.');
 
         return $allSuccess ? self::SUCCESS : ExitCode::ServiceFailed->value;
+    }
+
+    private function isUsingFpm(PhpManager $phpManager): bool
+    {
+        $versions = ['8.3', '8.4'];
+        foreach ($versions as $version) {
+            $socketPath = $phpManager->getSocketPath($version);
+            if (file_exists($socketPath)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function runStep(string $name, string $label, callable $callback): bool

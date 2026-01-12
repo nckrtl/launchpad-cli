@@ -9,7 +9,7 @@ beforeEach(function () {
 });
 
 it('stops all services successfully', function () {
-    $this->dockerManager->shouldReceive('stop')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('stop')->times(7)->andReturn(true);
 
     $this->artisan('stop')
         ->expectsOutputToContain('Launchpad stopped')
@@ -25,7 +25,7 @@ it('reports failure when a service fails to stop', function () {
 });
 
 it('outputs json when --json flag is used', function () {
-    $this->dockerManager->shouldReceive('stop')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('stop')->times(7)->andReturn(true);
 
     $this->artisan('stop --json')
         ->assertExitCode(0);

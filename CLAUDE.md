@@ -87,6 +87,11 @@ All commands support `--json` flag for machine-readable output.
 | `launchpad provision:status <slug>` | Check provisioning status |
 | `launchpad config:migrate` | Migrate config.json to SQLite |
 | `launchpad reverb:setup` | Setup Reverb WebSocket service |
+| `launchpad migrate:to-fpm` | Migrate from FrankenPHP to PHP-FPM architecture |
+| `launchpad horizon:status` | Check Horizon service status |
+| `launchpad horizon:start` | Start Horizon service |
+| `launchpad horizon:stop` | Stop Horizon service |
+| `launchpad horizon:restart` | Restart Horizon service |
 
 ## JSON Output Format
 
@@ -206,19 +211,53 @@ The CLI communicates with the orchestrator via `McpClient` for project managemen
 
 The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring background processes work without DNS access.
 
-## Docker Containers
+## Docker Containers (Services)
+
+The following services run in Docker containers:
 
 | Container | Purpose |
 |-----------|---------|
 | `launchpad-dns` | Local DNS resolver (dnsmasq) |
-| `launchpad-php-83` | PHP 8.3 FPM |
-| `launchpad-php-84` | PHP 8.4 FPM |
-| `launchpad-caddy` | Web server |
 | `launchpad-postgres` | PostgreSQL database |
 | `launchpad-redis` | Redis cache |
 | `launchpad-mailpit` | Mail catcher |
 | `launchpad-reverb` | WebSocket server (Laravel Reverb) |
-| `launchpad-horizon` | Queue worker (Laravel Horizon) |
+
+**Services running on host (not containerized):**
+- **PHP-FPM**: Multiple pools at `~/.config/launchpad/php/php{version}.sock`
+- **Caddy**: Web server with automatic HTTPS
+- **Horizon**: Queue worker as systemd (Linux) or launchd (macOS) service
+
+## PHP-FPM Architecture
+
+PHP-FPM runs directly on the host OS with Caddy as the web server. This replaces the previous FrankenPHP container-based architecture.
+
+### Architecture Overview
+- PHP-FPM runs directly on the host OS (not containerized)
+- Caddy runs as a binary on the host
+- Horizon runs as a systemd/launchd service
+- Better performance and resource usage
+- Easier debugging and log access
+
+#### Services on Host
+- **PHP-FPM**: Runs as systemd (Linux) or Homebrew (macOS) service with custom pools per version
+- **Caddy**: Single Caddy binary on host (not containerized)
+- **Horizon**: Runs as systemd/launchd service
+
+#### Key Files
+- `~/.config/launchpad/php/php{version}.sock` - FPM sockets
+- `~/.config/launchpad/php/php{version}-fpm.conf` - Pool configs
+- `/etc/systemd/system/launchpad-horizon.service` - Horizon service (Linux)
+- `~/Library/LaunchAgents/com.launchpad.horizon.plist` - Horizon service (macOS)
+
+#### Platform Adapters
+- `LinuxAdapter` - Uses apt, Ondřej PPA, systemd
+- `MacAdapter` - Uses Homebrew, launchd
+
+#### Key Services
+- `PhpManager` - PHP-FPM version management
+- `CaddyManager` - Host Caddy lifecycle
+- `HorizonManager` - Horizon as system service
 
 ## Prerequisites
 
@@ -226,7 +265,7 @@ The MCP client handles `.ccc` TLD resolution by mapping to localhost, ensuring b
 
 | Dependency | macOS | Linux |
 |------------|-------|-------|
-| PHP >= 8.2 | `php.new` or Homebrew | `php.new` or apt |
+| PHP >= 8.2 | Homebrew (shivammathur/php) | apt (Ondřej PPA) |
 | Docker | OrbStack (recommended) or Docker Desktop | docker.io |
 | Composer | Homebrew | apt |
 
@@ -594,9 +633,9 @@ See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-p
 
 ## Launchpad Web App & Queue Processing
 
-Web app (`~/.config/launchpad/web/`) provides API for project management. Horizon (`launchpad-horizon` container) processes queue jobs.
+Web app (`~/.config/launchpad/web/`) provides API for project management. Horizon (systemd/launchd service) processes queue jobs.
 
-**Key Concept:** Web app (Docker) uses `REDIS_HOST=launchpad-redis`; Horizon (Docker) connects via Docker network.
+**Key Concept:** Web app (via PHP-FPM) and Horizon both run on the host. They connect to Redis container via Docker network bridge (localhost:6379).
 
 ### API Endpoints
 
@@ -610,35 +649,35 @@ Web app (`~/.config/launchpad/web/`) provides API for project management. Horizo
 
 ```bash
 launchpad horizon:status                              # Check status
-docker logs launchpad-horizon --tail 100 -f           # View logs
-docker exec launchpad-horizon php artisan config:clear && docker restart launchpad-horizon  # After .env changes
+launchpad horizon:start                               # Start Horizon service
+launchpad horizon:stop                                # Stop Horizon service
+launchpad horizon:restart                             # Restart Horizon service
+journalctl -u launchpad-horizon -f                    # View logs (Linux)
+tail -f ~/.config/launchpad/web/storage/logs/horizon.log  # View app logs
 ```
 
 ### Troubleshooting Queue
 
 ```bash
-docker ps | grep launchpad-horizon                    # Check Horizon running
+systemctl status launchpad-horizon                    # Check Horizon running (Linux)
+launchctl list | grep horizon                         # Check Horizon running (macOS)
 redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default # Check pending jobs
 tail -f ~/.config/launchpad/web/storage/logs/laravel.log  # View logs
 ```
 
 
-## PHP Container Permissions (Non-Root)
+## PHP-FPM Permissions
 
-PHP containers run as `launchpad` user (UID/GID 1001) to match host file ownership.
-
-| Setting | Value | Purpose |
-|---------|-------|---------|
-| UID/GID | 1001 | Matches host `launchpad` user |
-| Docker GID | 988 | Docker socket access for status checks |
+PHP-FPM runs as the `launchpad` user on the host, with direct access to all project files.
 
 ```bash
-# Verify container user
-docker exec launchpad-php-85 id
-# uid=1001(launchpad) gid=1001(launchpad) groups=988(dockerhost)
-```
+# Verify PHP-FPM is running
+systemctl status php8.4-fpm  # Linux
+brew services list | grep php  # macOS
 
-If upgrading from root containers: `cd ~/.config/launchpad/php && docker compose build --no-cache`
+# Check FPM pool status
+cat ~/.config/launchpad/php/php84-fpm.conf
+```
 
 ## Actions Pattern
 
@@ -833,6 +872,7 @@ After making changes to `web/`:
 # Copy to deployed location
 cp -r ~/projects/launchpad-cli/web/* ~/.config/launchpad/web/
 
-# Restart Horizon to pick up changes
-docker restart launchpad-horizon
+# Clear config cache and restart Horizon
+cd ~/.config/launchpad/web && php artisan config:clear
+launchpad horizon:restart
 ```

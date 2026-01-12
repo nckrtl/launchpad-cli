@@ -16,22 +16,22 @@ beforeEach(function () {
 
 it('restarts all services by calling stop and start', function () {
     // Stop expectations
-    $this->dockerManager->shouldReceive('stop')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('stop')->times(7)->andReturn(true);
 
     // Start expectations
     $this->caddyfileGenerator->shouldReceive('generate')->once();
     $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
 
     $this->artisan('restart')
         ->assertExitCode(0);
 });
 
 it('outputs json when --json flag is used', function () {
-    $this->dockerManager->shouldReceive('stop')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('stop')->times(7)->andReturn(true);
     $this->caddyfileGenerator->shouldReceive('generate')->once();
     $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->times(6)->andReturn(true);
+    $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
 
     $this->artisan('restart --json')
         ->assertExitCode(0);
