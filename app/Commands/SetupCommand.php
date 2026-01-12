@@ -41,7 +41,7 @@ class SetupCommand extends Command
         $jsonOutput = $this->option('json') === true;
 
         // Clean up version numbers (remove dots if needed)
-        $phpVersions = array_map(fn ($version) => str_replace('.', '', trim((string) $version)), $phpVersions);
+        $phpVersions = array_map(fn ($version) => $this->normalizePhpVersion(trim((string) $version)), $phpVersions);
 
         if ($platform === 'Darwin') {
             return $this->setupMac(
@@ -150,5 +150,21 @@ class SetupCommand extends Command
         );
 
         return $success ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * Normalize PHP version to X.Y format (e.g., "84" -> "8.4", "8.4" -> "8.4")
+     */
+    protected function normalizePhpVersion(string $version): string
+    {
+        // Remove php@ prefix if present
+        $version = str_replace(['php@', 'php'], '', $version);
+
+        // If no dot, add one (84 -> 8.4)
+        if (! str_contains($version, '.')) {
+            $version = substr($version, 0, 1).'.'.substr($version, 1);
+        }
+
+        return $version;
     }
 }
