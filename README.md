@@ -4,7 +4,7 @@ A local PHP development environment powered by Docker. Launchpad provides a simp
 
 ## Features
 
-- **Multiple PHP Versions** - Run PHP 8.3 and 8.4 side-by-side via FrankenPHP
+- **Multiple PHP Versions** - Run PHP 8.3, 8.4, and 8.5 side-by-side via PHP-FPM
 - **Automatic HTTPS** - Local SSL certificates via Caddy
 - **Essential Services** - PostgreSQL, Redis, and Mailpit included
 - **Simple DNS** - Automatic `.test` domain resolution
@@ -55,7 +55,7 @@ Make sure `~/.local/bin` is in your PATH.
 | `launchpad restart` | Restart all Launchpad services |
 | `launchpad status` | Show status and running services |
 | `launchpad sites` | List all sites with their PHP versions |
-| `launchpad php <site> <version>` | Set PHP version for a site (8.3 or 8.4) |
+| `launchpad php <site> <version>` | Set PHP version for a site (8.3, 8.4, 8.5) |
 | `launchpad logs` | Tail container logs |
 | `launchpad trust` | Install Caddy root CA for local HTTPS |
 | `launchpad upgrade` | Upgrade to the latest version |
@@ -75,11 +75,70 @@ Make sure `~/.local/bin` is in your PATH.
 
 ## Services & Ports
 
+## Service Management
+
+Launchpad provides a declarative service management system. Services are defined as templates and can be enabled, configured, or disabled.
+
+### Service Commands
+
+| Command | Description |
+|---------|-------------|
+| `launchpad service:list` | List configured services with status |
+| `launchpad service:list --available` | Show available service templates |
+| `launchpad service:enable <name>` | Enable a service with defaults |
+| `launchpad service:disable <name>` | Disable a service |
+| `launchpad service:configure <name> --set key=value` | Update service configuration |
+| `launchpad service:info <name>` | Show detailed service information |
+
+### Available Services
+
+| Service | Category | Default Port | Description |
+|---------|----------|--------------|-------------|
+| postgres | database | 5432 | PostgreSQL database |
+| mysql | database | 3306 | MySQL database |
+| redis | cache | 6379 | Redis cache/session store |
+| mailpit | mail | 1025/8025 | Email testing (SMTP/Web UI) |
+| meilisearch | search | 7700 | Full-text search engine |
+| reverb | websocket | 6001 | Laravel Reverb WebSocket |
+| dns | core | 53 | Local DNS resolver |
+
+### Examples
+
+```bash
+# List current services
+launchpad service:list
+
+# Enable MySQL database
+launchpad service:enable mysql
+
+# Change PostgreSQL to version 16
+launchpad service:configure postgres --set version=16
+
+# Change Redis max memory
+launchpad service:configure redis --set maxmemory=512mb
+
+# Show service details
+launchpad service:info postgres
+```
+
+### Configuration
+
+Services are configured in `~/.config/launchpad/services.yaml`. Each service can specify:
+
+- `enabled` - Whether the service is active
+- `version` - Service version (from available versions)
+- `port` - Port mapping
+- `environment` - Environment variables
+- Additional service-specific options
+
+Changes to services.yaml automatically regenerate `docker-compose.yaml`.
+
 | Service | Port(s) | Description |
 |---------|---------|-------------|
 | Caddy | 80, 443 | Web server with automatic HTTPS |
-| PHP 8.3 | - | FrankenPHP worker |
-| PHP 8.4 | - | FrankenPHP worker |
+| PHP 8.3 | - | PHP-FPM pool |
+| PHP 8.4 | - | PHP-FPM pool |
+| PHP 8.5 | - | PHP-FPM pool |
 | PostgreSQL | 5432 | Database server |
 | Redis | 6379 | Cache server |
 | Mailpit | 1025, 8025 | Mail catcher (SMTP: 1025, Web UI: 8025) |

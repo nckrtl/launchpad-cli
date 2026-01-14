@@ -758,6 +758,206 @@ $result = app(ConfigureEnvironment::class)->handle($context, $logger);
 if ($result->isFailed()) { return $this->error($result->error); }
 ```
 
+## Service Templating System
+
+Launchpad uses a declarative service templating system to manage Docker services. Services are defined using JSON templates and configured via YAML.
+
+### Architecture Overview
+
+```
+stubs/templates/           # Service template definitions (JSON)
+├── postgres.json
+├── redis.json
+├── mailpit.json
+├── meilisearch.json
+├── mysql.json
+├── dns.json
+└── reverb.json
+
+~/.config/launchpad/
+├── services.yaml          # User service configuration
+└── docker-compose.yaml    # Generated from services.yaml
+```
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `ServiceTemplate` | `app/Data/ServiceTemplate.php` | Immutable DTO for template data |
+| `ServiceTemplateLoader` | `app/Services/ServiceTemplateLoader.php` | Loads/caches JSON templates |
+| `ServiceConfigValidator` | `app/Services/ServiceConfigValidator.php` | Validates config against schema |
+| `ServiceManager` | `app/Services/ServiceManager.php` | Enables/disables/configures services |
+| `ComposeGenerator` | `app/Services/ComposeGenerator.php` | Generates docker-compose.yaml |
+
+### Service Template Format
+
+Each service is defined in `stubs/templates/{name}.json`:
+
+```json
+{
+    "name": "postgres",
+    "label": "PostgreSQL",
+    "description": "Advanced open source relational database",
+    "category": "database",
+    "versions": ["17", "16", "15", "14", "13"],
+    "required": false,
+    "dependsOn": [],
+    "configSchema": {
+        "required": ["port"],
+        "properties": {
+            "port": {
+                "type": "number",
+                "default": 5432,
+                "minimum": 1024,
+                "maximum": 65535
+            },
+            "environment": {
+                "type": "object",
+                "properties": {
+                    "POSTGRES_USER": { "type": "string", "default": "launchpad" },
+                    "POSTGRES_PASSWORD": { "type": "string", "default": "secret" }
+                }
+            }
+        }
+    },
+    "dockerConfig": {
+        "image": "postgres:${version}",
+        "ports": ["5432:5432"],
+        "volumes": ["${data_path}:/var/lib/postgresql/data"],
+        "environment": {
+            "POSTGRES_USER": "launchpad",
+            "POSTGRES_PASSWORD": "secret"
+        },
+        "healthcheck": {
+            "test": ["CMD-SHELL", "pg_isready -U launchpad"],
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 5
+        }
+    }
+}
+```
+
+### Template Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Internal identifier (filename without .json) |
+| `label` | string | Human-readable display name |
+| `description` | string | Service description |
+| `category` | string | Category for grouping (database, cache, mail, etc.) |
+| `versions` | string[] | Available versions (first is default) |
+| `required` | boolean | If true, service cannot be disabled |
+| `dependsOn` | string[] | Services that must be enabled first |
+| `configSchema` | object | JSON Schema for configuration validation |
+| `dockerConfig` | object | Docker container configuration |
+
+### Configuration Schema
+
+The `configSchema` uses JSON Schema format with these supported validators:
+
+| Validator | Type | Description |
+|-----------|------|-------------|
+| `type` | string | Data type: `number`, `string`, `boolean`, `object`, `array` |
+| `default` | mixed | Default value if not provided |
+| `required` | string[] | Fields that must be present |
+| `minimum` | number | Minimum numeric value |
+| `maximum` | number | Maximum numeric value |
+| `minLength` | number | Minimum string length |
+| `maxLength` | number | Maximum string length |
+| `pattern` | string | Regex pattern for strings |
+| `enum` | array | Allowed values |
+
+### Docker Config Variables
+
+The `dockerConfig` section supports variable interpolation:
+
+| Variable | Description |
+|----------|-------------|
+| `${version}` | Selected service version from `services.yaml` |
+| `${port}` | Configured port from `services.yaml` |
+| `${data_path}` | Data directory path (default: `~/.config/launchpad/data/{service}`) |
+
+### User Configuration (services.yaml)
+
+Users configure services in `~/.config/launchpad/services.yaml`:
+
+```yaml
+services:
+  postgres:
+    enabled: true
+    version: "17"
+    port: 5432
+    environment:
+      POSTGRES_USER: launchpad
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: launchpad
+
+  redis:
+    enabled: true
+    version: "7.4"
+    port: 6379
+    maxmemory: 256mb
+    persistence: true
+
+  mailpit:
+    enabled: true
+    version: latest
+    smtp_port: 1025
+    http_port: 8025
+
+  reverb:
+    enabled: false
+```
+
+### Service Commands
+
+| Command | Description |
+|---------|-------------|
+| `launchpad service:list` | List all services with status |
+| `launchpad service:list --available` | List available templates |
+| `launchpad service:enable <name>` | Enable a service |
+| `launchpad service:disable <name>` | Disable a service |
+| `launchpad service:configure <name> --set key=value` | Configure a service |
+| `launchpad service:info <name>` | Show service details |
+
+### Examples
+
+```bash
+# Enable MySQL (creates entry in services.yaml with defaults)
+launchpad service:enable mysql
+
+# Change PostgreSQL version
+launchpad service:configure postgres --set version=16
+
+# Change Redis port
+launchpad service:configure redis --set port=6380
+
+# Disable Mailpit
+launchpad service:disable mailpit
+
+# View service info
+launchpad service:info postgres --json
+```
+
+### Adding a New Service Template
+
+1. Create `stubs/templates/{name}.json` with required fields
+2. Define `configSchema` for validation
+3. Define `dockerConfig` for container setup
+4. Test with `launchpad service:enable {name}`
+
+### Service Categories
+
+| Category | Services |
+|----------|----------|
+| `database` | postgres, mysql |
+| `cache` | redis |
+| `mail` | mailpit |
+| `search` | meilisearch |
+| `websocket` | reverb |
+| `core` | dns |
+
 ## Testing
 
 Tests use Pest PHP. Helper functions in `tests/Pest.php`:
