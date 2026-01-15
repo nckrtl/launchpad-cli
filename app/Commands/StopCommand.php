@@ -16,7 +16,7 @@ class StopCommand extends Command
 
     protected $signature = 'stop {--json : Output as JSON}';
 
-    protected $description = 'Stop all Launchpad services';
+    protected $description = 'Stop all Orbit services';
 
     public function handle(
         ServiceManager $serviceManager,
@@ -59,7 +59,7 @@ class StopCommand extends Command
         }
 
         $this->newLine();
-        $this->info('Launchpad stopped.');
+        $this->info('Orbit stopped.');
 
         return $allSuccess ? self::SUCCESS : ExitCode::ServiceFailed->value;
     }

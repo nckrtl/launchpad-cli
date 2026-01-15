@@ -29,7 +29,7 @@ class HorizonStatusCommand extends Command
 
             if (! $isInstalled) {
                 $this->warn('Horizon service is not installed');
-                $this->info('Run: launchpad horizon:install');
+                $this->info('Run: orbit horizon:install');
 
                 return self::SUCCESS;
             }
@@ -38,7 +38,7 @@ class HorizonStatusCommand extends Command
                 $this->info('Horizon is running');
             } else {
                 $this->warn('Horizon is not running');
-                $this->info('Run: launchpad horizon:start');
+                $this->info('Run: orbit horizon:start');
             }
 
             return self::SUCCESS;

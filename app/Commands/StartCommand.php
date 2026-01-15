@@ -17,7 +17,7 @@ class StartCommand extends Command
 
     protected $signature = 'start {--json : Output as JSON}';
 
-    protected $description = 'Start all Launchpad services';
+    protected $description = 'Start all Orbit services';
 
     public function handle(
         ServiceManager $serviceManager,
@@ -85,7 +85,7 @@ class StartCommand extends Command
 
         $this->newLine();
         if ($allSuccess) {
-            $this->info('Launchpad is running!');
+            $this->info('Orbit is running!');
         } else {
             $this->warn('Some services failed to start.');
         }

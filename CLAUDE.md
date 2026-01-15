@@ -1,10 +1,10 @@
-# Launchpad CLI
+# Orbit CLI
 
 A Laravel Zero CLI tool for managing local PHP development environments using Docker containers.
 
 ## Project Overview
 
-Launchpad sets up a complete local development environment with:
+Orbit sets up a complete local development environment with:
 
 - **Caddy** - Web server with automatic HTTPS (TLS internal)
 - **PHP 8.4 & 8.5** - Multiple PHP versions via PHP-FPM on host
@@ -18,7 +18,7 @@ Launchpad sets up a complete local development environment with:
 ```
 app/
 ├── Commands/          # CLI commands (Laravel Zero)
-│   ├── InitCommand.php          # Initialize launchpad configuration
+│   ├── InitCommand.php          # Initialize orbit configuration
 │   ├── StartCommand.php         # Start all Docker services
 │   ├── StopCommand.php          # Stop all Docker services
 │   ├── RestartCommand.php       # Restart all services
@@ -66,33 +66,33 @@ All commands support `--json` flag for machine-readable output.
 
 | Command                                       | Description                                     |
 | --------------------------------------------- | ----------------------------------------------- |
-| `launchpad init`                              | Initialize configuration                        |
-| `launchpad start`                             | Start all services                              |
-| `launchpad stop`                              | Stop all services                               |
-| `launchpad restart`                           | Restart all services                            |
-| `launchpad status`                            | Show service status                             |
-| `launchpad sites`                             | List all sites                                  |
-| `launchpad php <site> <version>`              | Set PHP version for a site                      |
-| `launchpad php <site> --reset`                | Reset to default PHP version                    |
-| `launchpad logs [service]`                    | View service logs                               |
-| `launchpad trust`                             | Trust the local CA certificate                  |
-| `launchpad upgrade`                           | Upgrade to the latest version                   |
-| `launchpad upgrade --check`                   | Check for available updates                     |
-| `launchpad worktrees [site]`                  | List git worktrees with subdomains              |
-| `launchpad worktree:refresh`                  | Refresh and auto-link new worktrees             |
-| `launchpad worktree:unlink <site> <worktree>` | Unlink worktree from site                       |
-| `launchpad project:list`                      | List all directories in scan paths              |
-| `launchpad project:scan`                      | Scan for git repos in configured paths          |
-| `launchpad project:update [path]`             | Update project (git pull + deps)                |
-| `launchpad project:delete <slug>`             | Delete project with cascade                     |
-| `launchpad provision:status <slug>`           | Check provisioning status                       |
-| `launchpad config:migrate`                    | Migrate config.json to SQLite                   |
-| `launchpad reverb:setup`                      | Setup Reverb WebSocket service                  |
-| `launchpad migrate:to-fpm`                    | Migrate from FrankenPHP to PHP-FPM architecture |
-| `launchpad horizon:status`                    | Check Horizon service status                    |
-| `launchpad horizon:start`                     | Start Horizon service                           |
-| `launchpad horizon:stop`                      | Stop Horizon service                            |
-| `launchpad horizon:restart`                   | Restart Horizon service                         |
+| `orbit init`                              | Initialize configuration                        |
+| `orbit start`                             | Start all services                              |
+| `orbit stop`                              | Stop all services                               |
+| `orbit restart`                           | Restart all services                            |
+| `orbit status`                            | Show service status                             |
+| `orbit sites`                             | List all sites                                  |
+| `orbit php <site> <version>`              | Set PHP version for a site                      |
+| `orbit php <site> --reset`                | Reset to default PHP version                    |
+| `orbit logs [service]`                    | View service logs                               |
+| `orbit trust`                             | Trust the local CA certificate                  |
+| `orbit upgrade`                           | Upgrade to the latest version                   |
+| `orbit upgrade --check`                   | Check for available updates                     |
+| `orbit worktrees [site]`                  | List git worktrees with subdomains              |
+| `orbit worktree:refresh`                  | Refresh and auto-link new worktrees             |
+| `orbit worktree:unlink <site> <worktree>` | Unlink worktree from site                       |
+| `orbit project:list`                      | List all directories in scan paths              |
+| `orbit project:scan`                      | Scan for git repos in configured paths          |
+| `orbit project:update [path]`             | Update project (git pull + deps)                |
+| `orbit project:delete <slug>`             | Delete project with cascade                     |
+| `orbit provision:status <slug>`           | Check provisioning status                       |
+| `orbit config:migrate`                    | Migrate config.json to SQLite                   |
+| `orbit reverb:setup`                      | Setup Reverb WebSocket service                  |
+| `orbit migrate:to-fpm`                    | Migrate from FrankenPHP to PHP-FPM architecture |
+| `orbit horizon:status`                    | Check Horizon service status                    |
+| `orbit horizon:start`                     | Start Horizon service                           |
+| `orbit horizon:stop`                      | Stop Horizon service                            |
+| `orbit horizon:restart`                   | Restart Horizon service                         |
 
 ## JSON Output Format
 
@@ -103,11 +103,11 @@ All commands support `--json` for structured output:
 {"success": false, "error": "..."}  // Error
 ```
 
-Test with: `launchpad status --json | jq .` or `launchpad sites --json | jq '.data.sites'`
+Test with: `orbit status --json | jq .` or `orbit sites --json | jq '.data.sites'`
 
 ## Git Worktree Support
 
-Launchpad automatically detects git worktrees and creates subdomains for them:
+Orbit automatically detects git worktrees and creates subdomains for them:
 
 - Worktrees are accessible via `<worktree>.<site>.test` (e.g., `feature-auth.myapp.test`)
 - Run `worktree:refresh` after creating new worktrees to update Caddy routing
@@ -169,7 +169,7 @@ if ($error) {
 
 ## Configuration
 
-User config is stored at `~/.config/launchpad/config.json`:
+User config is stored at `~/.config/orbit/config.json`:
 
 ```json
 {
@@ -183,7 +183,7 @@ User config is stored at `~/.config/launchpad/config.json`:
 
 ### SQLite Database
 
-PHP version overrides and project metadata are stored in SQLite at `~/.config/launchpad/database.sqlite`:
+PHP version overrides and project metadata are stored in SQLite at `~/.config/orbit/database.sqlite`:
 
 ```sql
 CREATE TABLE projects (
@@ -218,15 +218,15 @@ The following services run in Docker containers:
 
 | Container            | Purpose                           |
 | -------------------- | --------------------------------- |
-| `launchpad-dns`      | Local DNS resolver (dnsmasq)      |
-| `launchpad-postgres` | PostgreSQL database               |
-| `launchpad-redis`    | Redis cache                       |
-| `launchpad-mailpit`  | Mail catcher                      |
-| `launchpad-reverb`   | WebSocket server (Laravel Reverb) |
+| `orbit-dns`      | Local DNS resolver (dnsmasq)      |
+| `orbit-postgres` | PostgreSQL database               |
+| `orbit-redis`    | Redis cache                       |
+| `orbit-mailpit`  | Mail catcher                      |
+| `orbit-reverb`   | WebSocket server (Laravel Reverb) |
 
 **Services running on host (not containerized):**
 
-- **PHP-FPM**: Multiple pools at `~/.config/launchpad/php/php{version}.sock`
+- **PHP-FPM**: Multiple pools at `~/.config/orbit/php/php{version}.sock`
 - **Caddy**: Web server with automatic HTTPS
 - **Horizon**: Queue worker as systemd (Linux) or launchd (macOS) service
 
@@ -250,10 +250,10 @@ PHP-FPM runs directly on the host OS with Caddy as the web server. This replaces
 
 #### Key Files
 
-- `~/.config/launchpad/php/php{version}.sock` - FPM sockets
-- `~/.config/launchpad/php/php{version}-fpm.conf` - Pool configs
-- `/etc/systemd/system/launchpad-horizon.service` - Horizon service (Linux)
-- `~/Library/LaunchAgents/com.launchpad.horizon.plist` - Horizon service (macOS)
+- `~/.config/orbit/php/php{version}.sock` - FPM sockets
+- `~/.config/orbit/php/php{version}-fpm.conf` - Pool configs
+- `/etc/systemd/system/orbit-horizon.service` - Horizon service (Linux)
+- `~/Library/LaunchAgents/com.orbit.horizon.plist` - Horizon service (macOS)
 
 #### Platform Adapters
 
@@ -282,7 +282,7 @@ PHP-FPM runs directly on the host OS with Caddy as the web server. This replaces
 | ---------- | ------------- | -------- | ---------------------- |
 | dig        | DNS debugging | Built-in | `apt install dnsutils` |
 
-The `launchpad init` command will check for and offer to install missing prerequisites automatically.
+The `orbit init` command will check for and offer to install missing prerequisites automatically.
 
 ### Container Runtime (macOS)
 
@@ -306,7 +306,7 @@ orb migrate docker
 
 ## DNS Configuration
 
-Launchpad uses a Docker container (`launchpad-dns`) running dnsmasq to resolve custom TLD domains.
+Orbit uses a Docker container (`orbit-dns`) running dnsmasq to resolve custom TLD domains.
 
 **How it works:** System DNS → 127.0.0.1 → Docker DNS → resolves `.{tld}` to `HOST_IP`
 
@@ -317,7 +317,7 @@ Launchpad uses a Docker container (`launchpad-dns`) running dnsmasq to resolve c
 | **macOS** | `sudo networksetup -setdnsservers Wi-Fi 127.0.0.1`                              |
 | **Linux** | Disable `systemd-resolved` stub listener, point `/etc/resolv.conf` to 127.0.0.1 |
 
-The `launchpad init` command guides through DNS setup and detects existing dnsmasq installations.
+The `orbit init` command guides through DNS setup and detects existing dnsmasq installations.
 
 ### Troubleshooting
 
@@ -326,8 +326,8 @@ The `launchpad init` command guides through DNS setup and detects existing dnsma
 dig myproject.test @127.0.0.1
 
 # Check DNS container
-docker ps | grep launchpad-dns
-docker logs launchpad-dns
+docker ps | grep orbit-dns
+docker logs orbit-dns
 
 # Port 53 in use? Check what's using it:
 sudo lsof -i :53
@@ -346,10 +346,10 @@ sudo lsof -i :53
 
 ```bash
 # From project root
-php launchpad <command>
+php orbit <command>
 
 # Or with executable
-./launchpad <command>
+./orbit <command>
 ```
 
 ### Quality Tools
@@ -396,8 +396,8 @@ git config core.hooksPath .githooks
 ### Testing JSON Output
 
 ```bash
-php launchpad status --json | jq .
-php launchpad sites --json | jq '.data.sites'
+php orbit status --json | jq .
+php orbit sites --json | jq '.data.sites'
 ```
 
 ## Claude Code Integration
@@ -420,27 +420,27 @@ Available Claude Code skills in `.claude/skills/`:
 
 ## Integration with Desktop App
 
-This CLI is designed to be controlled by the **launchpad-desktop** NativePHP application. The desktop app communicates via:
+This CLI is designed to be controlled by the **orbit-desktop** NativePHP application. The desktop app communicates via:
 
-- **Local execution:** `Process::run('launchpad status --json')`
-- **Remote execution:** `ssh user@host "cd ~/projects/launchpad && php launchpad status --json"`
+- **Local execution:** `Process::run('orbit status --json')`
+- **Remote execution:** `ssh user@host "cd ~/project./orbit && php orbit status --json"`
 
 The `--json` flag ensures machine-readable output for programmatic control.
 
 ## MCP Server
 
-Launchpad includes a Model Context Protocol (MCP) server that enables AI tools to understand infrastructure and configure Laravel projects correctly (preventing redundant Redis/PostgreSQL/Mailpit installations).
+Orbit includes a Model Context Protocol (MCP) server that enables AI tools to understand infrastructure and configure Laravel projects correctly (preventing redundant Redis/PostgreSQL/Mailpit installations).
 
-**Transport:** stdio via `launchpad mcp:start launchpad` (TLD-independent, works when containers are down)
+**Transport:** stdio via `orbit mcp:start orbit` (TLD-independent, works when containers are down)
 
 **Client Configuration** (`~/.mcp.json`):
 
 ```json
 {
     "mcpServers": {
-        "launchpad": {
-            "command": "launchpad",
-            "args": ["mcp:start", "launchpad"]
+        "orbit": {
+            "command": "orbit",
+            "args": ["mcp:start", "orbit"]
         }
     }
 }
@@ -452,37 +452,37 @@ Launchpad includes a Model Context Protocol (MCP) server that enables AI tools t
 
 | Tool                       | Description                            | Parameters                         |
 | -------------------------- | -------------------------------------- | ---------------------------------- |
-| `launchpad_status`         | Get service status, health, site count | None                               |
-| `launchpad_start`          | Start all Docker services              | None                               |
-| `launchpad_stop`           | Stop all Docker services               | None                               |
-| `launchpad_restart`        | Restart all Docker services            | None                               |
-| `launchpad_sites`          | List all registered sites              | None                               |
-| `launchpad_php`            | Get/set PHP version for a site         | `site`, `action`, `version?`       |
-| `launchpad_project_create` | Create a new project                   | `name`, `template?`, `visibility?` |
-| `launchpad_project_delete` | Delete a project                       | `slug`                             |
-| `launchpad_logs`           | Get service logs                       | `service`, `lines?`                |
-| `launchpad_worktrees`      | List git worktrees                     | `site?`                            |
+| `orbit_status`         | Get service status, health, site count | None                               |
+| `orbit_start`          | Start all Docker services              | None                               |
+| `orbit_stop`           | Stop all Docker services               | None                               |
+| `orbit_restart`        | Restart all Docker services            | None                               |
+| `orbit_sites`          | List all registered sites              | None                               |
+| `orbit_php`            | Get/set PHP version for a site         | `site`, `action`, `version?`       |
+| `orbit_project_create` | Create a new project                   | `name`, `template?`, `visibility?` |
+| `orbit_project_delete` | Delete a project                       | `slug`                             |
+| `orbit_logs`           | Get service logs                       | `service`, `lines?`                |
+| `orbit_worktrees`      | List git worktrees                     | `site?`                            |
 
 ### Resources
 
 | URI                               | Description                                                |
 | --------------------------------- | ---------------------------------------------------------- |
-| `launchpad://infrastructure`      | All Docker services with status, health, ports             |
-| `launchpad://config`              | TLD, default PHP version, paths, enabled services          |
-| `launchpad://env-template/{type}` | .env templates (database, redis, mail, broadcasting, full) |
-| `launchpad://sites`               | All sites with domains, PHP versions, paths                |
+| `orbit://infrastructure`      | All Docker services with status, health, ports             |
+| `orbit://config`              | TLD, default PHP version, paths, enabled services          |
+| `orbit://env-template/{type}` | .env templates (database, redis, mail, broadcasting, full) |
+| `orbit://sites`               | All sites with domains, PHP versions, paths                |
 
 ### Prompts
 
 | Prompt                  | Description                                             |
 | ----------------------- | ------------------------------------------------------- |
-| `configure-laravel-env` | Guide for configuring .env for Launchpad infrastructure |
-| `setup-horizon`         | Guide for setting up Laravel Horizon with Launchpad     |
+| `configure-laravel-env` | Guide for configuring .env for Orbit infrastructure |
+| `setup-horizon`         | Guide for setting up Laravel Horizon with Orbit     |
 
 ### Testing
 
 ```bash
-launchpad mcp:inspector launchpad     # Interactive testing UI
+orbit mcp:inspector orbit     # Interactive testing UI
 ./vendor/bin/pest tests/Feature/Mcp   # Run MCP tests (47 tests)
 ```
 
@@ -500,7 +500,7 @@ launchpad mcp:inspector launchpad     # Interactive testing UI
 Creates a new project placeholder and starts background provisioning:
 
 ```bash
-launchpad project:create my-app \
+orbit project:create my-app \
   --template=user/repo \
   --visibility=private \
   --json
@@ -555,14 +555,14 @@ $broadcaster->broadcast('provisioning', 'project.provision.status', [
 - `provisioning` - Global channel for all events
 - `project.{slug}` - Project-specific channel
 
-**Configuration** (~/.config/launchpad/config.json):
+**Configuration** (~/.config/orbit/config.json):
 
 ```json
 {
     "reverb": {
-        "app_id": "launchpad",
-        "app_key": "launchpad-key",
-        "app_secret": "launchpad-secret",
+        "app_id": "orbit",
+        "app_key": "orbit-key",
+        "app_secret": "orbit-secret",
         "host": "reverb.ccc",
         "port": 443,
         "internal_port": 6001
@@ -639,7 +639,7 @@ ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh
 ssh launchpad@10.8.0.16 "bash -s" < .claude/scripts/test-provision-flow.sh my-test-project
 ```
 
-See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-provision/SKILL.md`
+See the full testing guide in the orbit-desktop repo: `.claude/skills/test-provision/SKILL.md`
 
 ## Troubleshooting Provisioning
 
@@ -647,21 +647,21 @@ See the full testing guide in the launchpad-desktop repo: `.claude/skills/test-p
 | ----------------------- | ------------------------------ | ----------------------------------------------------------- |
 | Bun install hangs       | Non-TTY progress output blocks | CLI uses CI=1 and --no-progress flags (v0.0.17+)            |
 | Bun timeout (180s)      | Peer dependency conflicts      | CLI auto-falls back to `npm install --legacy-peer-deps`     |
-| Provisioning > 30s      | Check bun hang, network, deps  | `timeout 30 launchpad provision test-project ...`           |
+| Provisioning > 30s      | Check bun hang, network, deps  | `timeout 30 orbit provision test-project ...`           |
 | SQLite instead of pgsql | Provisioning failed early      | `sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env` |
 
 **SSH Non-TTY:** Always use `--no-progress` for bun in non-interactive contexts (SSH, Horizon jobs).
 
-## Launchpad Web App & Queue Processing
+## Orbit Web App & Queue Processing
 
-Web app (`~/.config/launchpad/web/`) provides API for project management. Horizon (systemd/launchd service) processes queue jobs.
+Web app (`~/.config/orbit/web/`) provides API for project management. Horizon (systemd/launchd service) processes queue jobs.
 
 **Key Concept:** Web app (via PHP-FPM) and Horizon both run on the host. They connect to Docker services via localhost (ports exposed to host).
 
 **Important .env settings:** Since Horizon runs on host (not in Docker), use `localhost` for service hosts:
 
-- `REDIS_HOST=localhost` (NOT `launchpad-redis`)
-- `REVERB_HOST=localhost` (NOT `launchpad-reverb`)
+- `REDIS_HOST=localhost` (NOT `orbit-redis`)
+- `REVERB_HOST=localhost` (NOT `orbit-reverb`)
 
 ### API Endpoints
 
@@ -669,26 +669,26 @@ Web app (`~/.config/launchpad/web/`) provides API for project management. Horizo
 | --------------- | ------ | -------------------------------------------- |
 | `/api/projects` | POST   | Create project (dispatches CreateProjectJob) |
 | `/api/projects` | GET    | List all projects                            |
-| `/api/status`   | GET    | Get launchpad status                         |
+| `/api/status`   | GET    | Get orbit status                         |
 
 ### Horizon Commands
 
 ```bash
-launchpad horizon:status                              # Check status
-launchpad horizon:start                               # Start Horizon service
-launchpad horizon:stop                                # Stop Horizon service
-launchpad horizon:restart                             # Restart Horizon service
-journalctl -u launchpad-horizon -f                    # View logs (Linux)
-tail -f ~/.config/launchpad/web/storage/logs/horizon.log  # View app logs
+orbit horizon:status                              # Check status
+orbit horizon:start                               # Start Horizon service
+orbit horizon:stop                                # Stop Horizon service
+orbit horizon:restart                             # Restart Horizon service
+journalctl -u orbit-horizon -f                    # View logs (Linux)
+tail -f ~/.config/orbit/web/storage/logs/horizon.log  # View app logs
 ```
 
 ### Troubleshooting Queue
 
 ```bash
-systemctl status launchpad-horizon                    # Check Horizon running (Linux)
+systemctl status orbit-horizon                    # Check Horizon running (Linux)
 launchctl list | grep horizon                         # Check Horizon running (macOS)
-redis-cli -h 127.0.0.1 LLEN launchpad_horizon:default # Check pending jobs
-tail -f ~/.config/launchpad/web/storage/logs/laravel.log  # View logs
+redis-cli -h 127.0.0.1 LLEN orbit_horizon:default # Check pending jobs
+tail -f ~/.config/orbit/web/storage/logs/laravel.log  # View logs
 ```
 
 ## PHP-FPM Permissions
@@ -701,7 +701,7 @@ systemctl status php8.4-fpm  # Linux
 brew services list | grep php  # macOS
 
 # Check FPM pool status
-cat ~/.config/launchpad/php/php84-fpm.conf
+cat ~/.config/orbit/php/php84-fpm.conf
 ```
 
 ## Actions Pattern
@@ -752,7 +752,7 @@ final readonly class MyAction {
 }
 ```
 
-Log files: `~/.config/launchpad/logs/provision/{slug}.log`
+Log files: `~/.config/orbit/logs/provision/{slug}.log`
 
 ### Available Actions
 
@@ -782,7 +782,7 @@ if ($result->isFailed()) { return $this->error($result->error); }
 
 ## Service Templating System
 
-Launchpad uses a declarative service templating system to manage Docker services. Services are defined using JSON templates and configured via YAML.
+Orbit uses a declarative service templating system to manage Docker services. Services are defined using JSON templates and configured via YAML.
 
 ### Architecture Overview
 
@@ -796,7 +796,7 @@ stubs/templates/           # Service template definitions (JSON)
 ├── dns.json
 └── reverb.json
 
-~/.config/launchpad/
+~/.config/orbit/
 ├── services.yaml          # User service configuration
 └── docker-compose.yaml    # Generated from services.yaml
 ```
@@ -838,7 +838,7 @@ Each service is defined in `stubs/templates/{name}.json`:
                 "properties": {
                     "POSTGRES_USER": {
                         "type": "string",
-                        "default": "launchpad"
+                        "default": "orbit"
                     },
                     "POSTGRES_PASSWORD": {
                         "type": "string",
@@ -853,11 +853,11 @@ Each service is defined in `stubs/templates/{name}.json`:
         "ports": ["5432:5432"],
         "volumes": ["${data_path}:/var/lib/postgresql/data"],
         "environment": {
-            "POSTGRES_USER": "launchpad",
+            "POSTGRES_USER": "orbit",
             "POSTGRES_PASSWORD": "secret"
         },
         "healthcheck": {
-            "test": ["CMD-SHELL", "pg_isready -U launchpad"],
+            "test": ["CMD-SHELL", "pg_isready -U orbit"],
             "interval": "10s",
             "timeout": "5s",
             "retries": 5
@@ -904,11 +904,11 @@ The `dockerConfig` section supports variable interpolation:
 | -------------- | ------------------------------------------------------------------- |
 | `${version}`   | Selected service version from `services.yaml`                       |
 | `${port}`      | Configured port from `services.yaml`                                |
-| `${data_path}` | Data directory path (default: `~/.config/launchpad/data/{service}`) |
+| `${data_path}` | Data directory path (default: `~/.config/orbit/data/{service}`) |
 
 ### User Configuration (services.yaml)
 
-Users configure services in `~/.config/launchpad/services.yaml`:
+Users configure services in `~/.config/orbit/services.yaml`:
 
 ```yaml
 services:
@@ -917,9 +917,9 @@ services:
         version: "17"
         port: 5432
         environment:
-            POSTGRES_USER: launchpad
+            POSTGRES_USER: orbit
             POSTGRES_PASSWORD: secret
-            POSTGRES_DB: launchpad
+            POSTGRES_DB: orbit
 
     redis:
         enabled: true
@@ -942,30 +942,30 @@ services:
 
 | Command                                              | Description                   |
 | ---------------------------------------------------- | ----------------------------- |
-| `launchpad service:list`                             | List all services with status |
-| `launchpad service:list --available`                 | List available templates      |
-| `launchpad service:enable <name>`                    | Enable a service              |
-| `launchpad service:disable <name>`                   | Disable a service             |
-| `launchpad service:configure <name> --set key=value` | Configure a service           |
-| `launchpad service:info <name>`                      | Show service details          |
+| `orbit service:list`                             | List all services with status |
+| `orbit service:list --available`                 | List available templates      |
+| `orbit service:enable <name>`                    | Enable a service              |
+| `orbit service:disable <name>`                   | Disable a service             |
+| `orbit service:configure <name> --set key=value` | Configure a service           |
+| `orbit service:info <name>`                      | Show service details          |
 
 ### Examples
 
 ```bash
 # Enable MySQL (creates entry in services.yaml with defaults)
-launchpad service:enable mysql
+orbit service:enable mysql
 
 # Change PostgreSQL version
-launchpad service:configure postgres --set version=16
+orbit service:configure postgres --set version=16
 
 # Change Redis port
-launchpad service:configure redis --set port=6380
+orbit service:configure redis --set port=6380
 
 # Disable Mailpit
-launchpad service:disable mailpit
+orbit service:disable mailpit
 
 # View service info
-launchpad service:info postgres --json
+orbit service:info postgres --json
 ```
 
 ### Adding a New Service Template
@@ -973,7 +973,7 @@ launchpad service:info postgres --json
 1. Create `stubs/templates/{name}.json` with required fields
 2. Define `configSchema` for validation
 3. Define `dockerConfig` for container setup
-4. Test with `launchpad service:enable {name}`
+4. Test with `orbit service:enable {name}`
 
 ### Service Categories
 
@@ -1014,7 +1014,7 @@ The web app includes an E2E test that replicates the desktop app workflow:
 
 ```bash
 # Run from the web app directory
-cd ~/projects/launchpad-cli/web
+cd ~/projects/orbit-cli/web
 php tests/e2e-desktop-flow-test.php
 
 # Use different TLD
@@ -1038,8 +1038,8 @@ php tests/e2e-desktop-flow-test.php --keep
 
 **Requirements:**
 
-- Full launchpad stack running (Caddy, PHP, Redis, Horizon, Reverb)
-- Web app deployed at `~/.config/launchpad/web/`
+- Full orbit stack running (Caddy, PHP, Redis, Horizon, Reverb)
+- Web app deployed at `~/.config/orbit/web/`
 - Horizon processing jobs
 
 ## WebSocket Broadcasting
@@ -1089,7 +1089,7 @@ Both events include: `{ slug, status, timestamp, error? }`
 
 ## Web App (API Backend)
 
-Located at `web/` directory, deployed to `~/.config/launchpad/web/`.
+Located at `web/` directory, deployed to `~/.config/orbit/web/`.
 
 ### Job Flow
 
@@ -1105,9 +1105,9 @@ After making changes to `web/`:
 
 ```bash
 # Copy to deployed location
-cp -r ~/projects/launchpad-cli/web/* ~/.config/launchpad/web/
+cp -r ~/projects/orbit-cli/web/* ~/.config/orbit/web/
 
 # Clear config cache and restart Horizon
-cd ~/.config/launchpad/web && php artisan config:clear
-launchpad horizon:restart
+cd ~/.config/orbit/web && php artisan config:clear
+orbit horizon:restart
 ```

@@ -22,5 +22,5 @@ it('has check option in signature', function () {
 it('has correct description', function () {
     $command = $this->app->make(\App\Commands\UpgradeCommand::class);
 
-    expect($command->getDescription())->toBe('Upgrade Launchpad to the latest version');
+    expect($command->getDescription())->toBe('Upgrade Orbit to the latest version');
 });

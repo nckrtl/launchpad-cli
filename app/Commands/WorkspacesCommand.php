@@ -26,7 +26,7 @@ class WorkspacesCommand extends Command
         }
 
         if (empty($workspaces)) {
-            $this->warn('No workspaces found. Create one with: launchpad workspace:create <name>');
+            $this->warn('No workspaces found. Create one with: orbit workspace:create <name>');
 
             return self::SUCCESS;
         }

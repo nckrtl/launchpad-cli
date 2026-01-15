@@ -19,10 +19,10 @@ class HorizonRestartCommand extends Command
         try {
             if (! $horizonManager->isInstalled()) {
                 if ($this->wantsJson()) {
-                    return $this->outputJsonError('Horizon service is not installed. Run: launchpad horizon:install');
+                    return $this->outputJsonError('Horizon service is not installed. Run: orbit horizon:install');
                 }
 
-                $this->error('Horizon service is not installed. Run: launchpad horizon:install');
+                $this->error('Horizon service is not installed. Run: orbit horizon:install');
 
                 return self::FAILURE;
             }

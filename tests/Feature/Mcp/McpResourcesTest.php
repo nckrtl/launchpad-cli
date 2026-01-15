@@ -32,7 +32,7 @@ beforeEach(function () {
 describe('InfrastructureResource', function () {
     it('has correct uri', function () {
         $resource = app(InfrastructureResource::class);
-        expect($resource->uri())->toBe('launchpad://infrastructure');
+        expect($resource->uri())->toBe('orbit://infrastructure');
     });
 
     it('has correct mime type', function () {
@@ -57,11 +57,11 @@ describe('InfrastructureResource', function () {
     it('tracks running and stopped services', function () {
         // Some running, some stopped
         $this->dockerManager->shouldReceive('isRunning')
-            ->with('launchpad-dns')->andReturn(true);
+            ->with('orbit-dns')->andReturn(true);
         $this->dockerManager->shouldReceive('isRunning')
-            ->with('launchpad-php-83')->andReturn(true);
+            ->with('orbit-php-83')->andReturn(true);
         $this->dockerManager->shouldReceive('isRunning')
-            ->with('launchpad-php-84')->andReturn(false);
+            ->with('orbit-php-84')->andReturn(false);
         $this->dockerManager->shouldReceive('isRunning')
             ->withAnyArgs()->andReturn(true);
         $this->dockerManager->shouldReceive('getHealthStatus')->andReturn('healthy');
@@ -80,7 +80,7 @@ describe('InfrastructureResource', function () {
 describe('ConfigResource', function () {
     it('has correct uri', function () {
         $resource = app(ConfigResource::class);
-        expect($resource->uri())->toBe('launchpad://config');
+        expect($resource->uri())->toBe('orbit://config');
     });
 
     it('has correct mime type', function () {
@@ -93,13 +93,13 @@ describe('ConfigResource', function () {
         $this->configManager->shouldReceive('getHostIp')->andReturn('127.0.0.1');
         $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
         $this->configManager->shouldReceive('getPaths')->andReturn(['/home/user/projects']);
-        $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/launchpad');
-        $this->configManager->shouldReceive('getWebAppPath')->andReturn('/home/user/.config/launchpad/web');
+        $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/orbit');
+        $this->configManager->shouldReceive('getWebAppPath')->andReturn('/home/user/.config/orbit/web');
         $this->configManager->shouldReceive('getEnabledServices')->andReturn(['reverb' => true]);
         $this->configManager->shouldReceive('getReverbConfig')->andReturn([
-            'app_id' => 'launchpad',
-            'app_key' => 'launchpad-key',
-            'app_secret' => 'launchpad-secret',
+            'app_id' => 'orbit',
+            'app_key' => 'orbit-key',
+            'app_secret' => 'orbit-secret',
             'host' => 'reverb.test',
             'port' => 443,
         ]);
@@ -115,9 +115,9 @@ describe('ConfigResource', function () {
 describe('EnvTemplateResource', function () {
     beforeEach(function () {
         $this->configManager->shouldReceive('getReverbConfig')->andReturn([
-            'app_id' => 'launchpad',
-            'app_key' => 'launchpad-key',
-            'app_secret' => 'launchpad-secret',
+            'app_id' => 'orbit',
+            'app_key' => 'orbit-key',
+            'app_secret' => 'orbit-secret',
             'host' => 'reverb.test',
             'port' => 443,
         ]);
@@ -137,7 +137,7 @@ describe('EnvTemplateResource', function () {
         $resource = app(EnvTemplateResource::class);
         $template = $resource->uriTemplate();
 
-        expect((string) $template)->toBe('launchpad://env-template/{type}');
+        expect((string) $template)->toBe('orbit://env-template/{type}');
     });
 
     it('returns database template with postgres config', function () {
@@ -184,7 +184,7 @@ describe('EnvTemplateResource', function () {
 describe('SitesResource', function () {
     it('has correct uri', function () {
         $resource = app(SitesResource::class);
-        expect($resource->uri())->toBe('launchpad://sites');
+        expect($resource->uri())->toBe('orbit://sites');
     });
 
     it('has correct mime type', function () {

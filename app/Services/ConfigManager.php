@@ -18,7 +18,7 @@ class ConfigManager
 
     public function getConfigPath(): string
     {
-        return (getenv('HOME') ?: '/home/launchpad').'/.config/launchpad';
+        return (getenv('HOME') ?: '/home/launchpad').'/.config/orbit';
     }
 
     public function getWebAppPath(): string
@@ -113,9 +113,9 @@ class ConfigManager
     {
         return [
             'enabled' => $this->isServiceEnabled('reverb'),
-            'app_id' => $this->get('reverb.app_id', 'launchpad'),
-            'app_key' => $this->get('reverb.app_key', 'launchpad-key'),
-            'app_secret' => $this->get('reverb.app_secret', 'launchpad-secret'),
+            'app_id' => $this->get('reverb.app_id', 'orbit'),
+            'app_key' => $this->get('reverb.app_key', 'orbit-key'),
+            'app_secret' => $this->get('reverb.app_secret', 'orbit-secret'),
             'host' => $this->get('reverb.host', 'reverb.'.$this->get('tld', 'test')),
             'port' => $this->get('reverb.port', 443),
             'scheme' => 'https',

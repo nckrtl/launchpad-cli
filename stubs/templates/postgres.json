@@ -18,7 +18,7 @@
                 "properties": {
                     "POSTGRES_USER": {
                         "type": "string",
-                        "default": "launchpad"
+                        "default": "orbit"
                     },
                     "POSTGRES_PASSWORD": {
                         "type": "string",
@@ -26,7 +26,7 @@
                     },
                     "POSTGRES_DB": {
                         "type": "string",
-                        "default": "launchpad"
+                        "default": "orbit"
                     }
                 }
             }
@@ -37,12 +37,12 @@
         "ports": ["5432:5432"],
         "volumes": ["${data_path}:/var/lib/postgresql/data"],
         "environment": {
-            "POSTGRES_USER": "launchpad",
+            "POSTGRES_USER": "orbit",
             "POSTGRES_PASSWORD": "secret",
-            "POSTGRES_DB": "launchpad"
+            "POSTGRES_DB": "orbit"
         },
         "healthcheck": {
-            "test": ["CMD-SHELL", "pg_isready -U launchpad"],
+            "test": ["CMD-SHELL", "pg_isready -U orbit"],
             "interval": "10s",
             "timeout": "5s",
             "retries": 5

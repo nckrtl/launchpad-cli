@@ -33,10 +33,10 @@ class ProjectController extends Controller
         $slug = Str::slug($validated['name']);
 
         // Reject reserved name
-        if (strtolower($slug) === 'launchpad') {
+        if (strtolower($slug) === 'orbit') {
             return response()->json([
                 'success' => false,
-                'error' => 'The name "launchpad" is reserved for the system.',
+                'error' => 'The name "orbit" is reserved for the system.',
             ], 422);
         }
 

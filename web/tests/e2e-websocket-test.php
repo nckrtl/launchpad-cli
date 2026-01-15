@@ -8,7 +8,7 @@ require __DIR__.'/../vendor/autoload.php';
 
 $tld = getenv('TLD') ?: 'ccc';
 $slug = 'e2e-ws-'.time();
-$apiBase = "https://launchpad.{$tld}/api";
+$apiBase = "https://orbit.{$tld}/api";
 
 echo "=== E2E WebSocket Broadcast Test ===\n";
 echo "Slug: {$slug}\n\n";
@@ -18,9 +18,9 @@ echo "Slug: {$slug}\n\n";
 // PHP SDK can subscribe to channels and receive events via polling
 
 $pusher = new Pusher\Pusher(
-    'launchpad-key',
-    'launchpad-secret',
-    'launchpad',
+    'orbit-key',
+    'orbit-secret',
+    'orbit',
     [
         'host' => "reverb.{$tld}",
         'port' => 443,
@@ -72,7 +72,7 @@ echo "  HTTP {$httpCode}: {$response}\n";
 // Wait for provisioning
 echo "\n[4] Waiting for provisioning (checking log + Reverb)...\n";
 $home = $_SERVER['HOME'] ?? '/home/launchpad';
-$logFile = "{$home}/.config/launchpad/logs/provision/{$slug}.log";
+$logFile = "{$home}/.config/orbit/logs/provision/{$slug}.log";
 $timeout = 120;
 $start = time();
 $lastStatus = '';
@@ -110,11 +110,11 @@ $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 echo "  HTTP {$httpCode}: {$response}\n";
 
 // Clear debug log and wait for deletion
-$debugLog = "{$home}/.config/launchpad/logs/reverb-debug.log";
+$debugLog = "{$home}/.config/orbit/logs/reverb-debug.log";
 @unlink($debugLog);
 
 echo "\n[6] Waiting for deletion broadcasts...\n";
-$logFile = "{$home}/.config/launchpad/logs/deletion/{$slug}.log";
+$logFile = "{$home}/.config/orbit/logs/deletion/{$slug}.log";
 $timeout = 60;
 $start = time();
 $lastStatus = '';

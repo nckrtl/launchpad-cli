@@ -61,7 +61,7 @@ class HorizonInstallCommand extends Command
             if ($started) {
                 $this->info('Horizon service installed and started successfully!');
             } else {
-                $this->warn('Horizon service installed but failed to start. Check logs with: launchpad horizon:logs');
+                $this->warn('Horizon service installed but failed to start. Check logs with: orbit horizon:logs');
             }
 
             return self::SUCCESS;

@@ -1,6 +1,6 @@
 {
-    "main": "launchpad",
-    "output": "builds/launchpad.phar",
+    "main": "orbit",
+    "output": "builds/orbit.phar",
     "chmod": "0755",
     "directories": [
         "app",

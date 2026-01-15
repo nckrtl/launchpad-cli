@@ -62,7 +62,7 @@ class ServiceConfigureCommand extends Command
                 $this->line("    {$key}: {$displayValue}");
             }
             $this->newLine();
-            $this->line("  <fg=gray>Run 'launchpad restart {$serviceName}' to apply changes</>");
+            $this->line("  <fg=gray>Run 'orbit restart {$serviceName}' to apply changes</>");
             $this->newLine();
 
             return self::SUCCESS;

@@ -25,8 +25,8 @@ class EnableServiceJob implements ShouldQueue
         $trackedJob = TrackedJob::find($this->jobId);
         $trackedJob?->markProcessing();
 
-        $launchpadBinary = env('LAUNCHPAD_BINARY', '/usr/local/bin/launchpad');
-        $result = Process::timeout(120)->run("{$launchpadBinary} services:enable {$this->service}");
+        $orbitBinary = env('ORBIT_BINARY', '/usr/local/bin/orbit');
+        $result = Process::timeout(120)->run("{$orbitBinary} services:enable {$this->service}");
 
         if ($result->successful()) {
             $trackedJob?->markCompleted();

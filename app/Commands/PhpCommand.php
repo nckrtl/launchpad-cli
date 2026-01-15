@@ -122,7 +122,7 @@ class PhpCommand extends Command
         if ($reloaded) {
             $this->info('Caddy reloaded');
         } elseif ($siteInfo['has_public_folder']) {
-            $this->warn('Could not reload Caddy. You may need to restart Launchpad.');
+            $this->warn('Could not reload Caddy. You may need to restart Orbit.');
         }
 
         return self::SUCCESS;

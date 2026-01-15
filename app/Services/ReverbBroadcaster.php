@@ -27,7 +27,7 @@ final class ReverbBroadcaster
 
             if ($isDocker) {
                 // Inside Docker: connect to Reverb container via Docker network
-                $this->host = getenv('REVERB_HOST') ?: 'launchpad-reverb';
+                $this->host = getenv('REVERB_HOST') ?: 'orbit-reverb';
                 $this->port = (int) (getenv('REVERB_PORT') ?: 6001);
             } else {
                 // On host: connect to Reverb internal port (6001)
@@ -68,7 +68,7 @@ final class ReverbBroadcaster
         }
 
         // Check for REDIS_HOST env var (set in our Horizon container)
-        if (getenv('REDIS_HOST') === 'launchpad-redis') {
+        if (getenv('REDIS_HOST') === 'orbit-redis') {
             return true;
         }
 
@@ -82,7 +82,7 @@ final class ReverbBroadcaster
     {
         // Debug logging
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
-        $debugLog = "{$home}/.config/launchpad/logs/reverb-debug.log";
+        $debugLog = "{$home}/.config/orbit/logs/reverb-debug.log";
         $timestamp = date('Y-m-d H:i:s');
 
         $debug = "[{$timestamp}] broadcast() called: channel={$channel} event={$event}\n";

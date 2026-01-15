@@ -8,7 +8,7 @@ use App\Services\ServiceTemplateLoader;
 
 describe('ServiceManager', function () {
     beforeEach(function () {
-        $this->testDir = sys_get_temp_dir().'/launchpad-sm-tests-'.uniqid();
+        $this->testDir = sys_get_temp_dir().'/orbit-sm-tests-'.uniqid();
         @mkdir($this->testDir, 0755, true);
 
         // Create templates directory

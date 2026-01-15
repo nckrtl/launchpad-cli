@@ -10,7 +10,7 @@ use Laravel\Mcp\Server\Prompts\Argument;
 
 class SetupHorizonPrompt extends Prompt
 {
-    protected string $description = 'Guide for setting up Laravel Horizon with Launchpad\'s Redis and queue infrastructure';
+    protected string $description = 'Guide for setting up Laravel Horizon with Orbit\'s Redis and queue infrastructure';
 
     /**
      * @return array<int, Argument>
@@ -36,10 +36,10 @@ class SetupHorizonPrompt extends Prompt
 
         return [
             Response::text(
-                "Please help me set up Laravel Horizon for the project '{$slug}' using Launchpad's shared Redis infrastructure."
+                "Please help me set up Laravel Horizon for the project '{$slug}' using Orbit's shared Redis infrastructure."
             ),
             Response::text(<<<HORIZON
-Here's how to set up Laravel Horizon with Launchpad's infrastructure:
+Here's how to set up Laravel Horizon with Orbit's infrastructure:
 
 ## 1. Install Horizon (if not already installed)
 
@@ -50,16 +50,16 @@ php artisan horizon:install
 
 ## 2. Configure .env for Redis Queue
 
-Launchpad already provides a Redis instance at `launchpad-redis:6379`, so you just need to configure your .env:
+Orbit already provides a Redis instance at `orbit-redis:6379`, so you just need to configure your .env:
 
 ```env
 QUEUE_CONNECTION=redis
-REDIS_HOST=launchpad-redis
+REDIS_HOST=orbit-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 ```
 
-**Important**: You do NOT need to install Redis locally. Launchpad's Redis container is already running and accessible to all your projects.
+**Important**: You do NOT need to install Redis locally. Orbit's Redis container is already running and accessible to all your projects.
 
 ## 3. Configure Horizon Settings
 
@@ -139,7 +139,7 @@ Or use a process manager like Supervisor (recommended for production):
 [program:{$slug}-horizon]
 command=php /path/to/{$slug}/artisan horizon
 directory=/path/to/{$slug}
-user=launchpad
+user=orbit
 autostart=true
 autorestart=true
 redirect_stderr=true
@@ -166,13 +166,13 @@ tail -f storage/logs/laravel.log
 
 ## Key Points
 
-- ✅ **Redis is shared**: All projects use `launchpad-redis:6379`
+- ✅ **Redis is shared**: All projects use `orbit-redis:6379`
 - ✅ **No local Redis needed**: The Docker container handles everything
 - ✅ **Cache prefixes matter**: Prevent collisions with unique prefixes
 - ✅ **Timeout configuration**: Adjust based on your longest-running jobs
 - ✅ **Dashboard access**: Available at `/{$slug}.test/horizon`
 
-The shared Redis instance is managed by Launchpad and is already optimized for multiple Laravel applications. Your Horizon workers will process jobs from the `{$slug}_horizon:*` queues without interfering with other projects.
+The shared Redis instance is managed by Orbit and is already optimized for multiple Laravel applications. Your Horizon workers will process jobs from the `{$slug}_horizon:*` queues without interfering with other projects.
 HORIZON
             )->asAssistant(),
         ];

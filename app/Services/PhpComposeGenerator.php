@@ -19,7 +19,7 @@ class PhpComposeGenerator
         $volumeMounts = $this->generateVolumeMounts($paths);
         $worktreeMount = $this->generateWorktreeMount();
         $vibeKanbanMount = $this->generateVibeKanbanMount();
-        $launchpadWebMount = $this->generateLaunchpadWebMount();
+        $orbitWebMount = $this->generateOrbitWebMount();
         $configMount = $this->generateConfigMount();
 
         $healthcheck = $this->generateHealthcheck();
@@ -29,52 +29,52 @@ class PhpComposeGenerator
     build:
       context: .
       dockerfile: Dockerfile.php83
-    image: launchpad-php:8.3
-    container_name: launchpad-php-83
+    image: orbit-php:8.3
+    container_name: orbit-php-83
     ports:
       - \"8083:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$orbitWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
       - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
-      - launchpad
+      - orbit
 {$healthcheck}
   php-84:
     build:
       context: .
       dockerfile: Dockerfile.php84
-    image: launchpad-php:8.4
-    container_name: launchpad-php-84
+    image: orbit-php:8.4
+    container_name: orbit-php-84
     ports:
       - \"8084:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$orbitWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
       - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
-      - launchpad
+      - orbit
 {$healthcheck}
   php-85:
     build:
       context: .
       dockerfile: Dockerfile.php85
-    image: launchpad-php:8.5
-    container_name: launchpad-php-85
+    image: orbit-php:8.5
+    container_name: orbit-php-85
     ports:
       - \"8085:8080\"
     volumes:
-{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$launchpadWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
+{$volumeMounts}{$worktreeMount}{$vibeKanbanMount}{$orbitWebMount}{$configMount}      - /var/run/docker.sock:/var/run/docker.sock
       - ./php.ini:/usr/local/etc/php/php.ini:ro
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
     restart: unless-stopped
     networks:
-      - launchpad
+      - orbit
 {$healthcheck}
 networks:
-  launchpad:
+  orbit:
     external: true
 ";
 
@@ -119,13 +119,13 @@ networks:
         return '';
     }
 
-    protected function generateLaunchpadWebMount(): string
+    protected function generateOrbitWebMount(): string
     {
-        // Mount the launchpad companion web app
+        // Mount the orbit companion web app
         $webAppPath = $this->configManager->getWebAppPath();
 
         if (File::isDirectory($webAppPath)) {
-            return "      - {$webAppPath}:/launchpad-web\n";
+            return "      - {$webAppPath}:/orbit-web\n";
         }
 
         return '';
@@ -133,12 +133,12 @@ networks:
 
     protected function generateConfigMount(): string
     {
-        // Mount the launchpad config directory to /home/launchpad/.config/launchpad
-        // This allows the CLI web app (running as launchpad user in FrankenPHP) to read the config
+        // Mount the orbit config directory to /home/launchpad/.config/orbit
+        // This allows the CLI web app (running as orbit user in FrankenPHP) to read the config
         $configPath = $this->configManager->getConfigPath();
 
         if (File::isDirectory($configPath)) {
-            return "      - {$configPath}:/home/launchpad/.config/launchpad:ro\n";
+            return "      - {$configPath}:/home/launchpad/.config/orbit:ro\n";
         }
 
         return '';

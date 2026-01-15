@@ -19,15 +19,15 @@
                 "properties": {
                     "REVERB_APP_ID": {
                         "type": "string",
-                        "default": "launchpad"
+                        "default": "orbit"
                     },
                     "REVERB_APP_KEY": {
                         "type": "string",
-                        "default": "launchpad-key"
+                        "default": "orbit-key"
                     },
                     "REVERB_APP_SECRET": {
                         "type": "string",
-                        "default": "launchpad-secret"
+                        "default": "orbit-secret"
                     }
                 }
             }
@@ -37,9 +37,9 @@
         "image": "quay.io/soketi/soketi:${version}",
         "ports": ["8080:8080"],
         "environment": {
-            "SOKETI_DEFAULT_APP_ID": "launchpad",
-            "SOKETI_DEFAULT_APP_KEY": "launchpad-key",
-            "SOKETI_DEFAULT_APP_SECRET": "launchpad-secret",
+            "SOKETI_DEFAULT_APP_ID": "orbit",
+            "SOKETI_DEFAULT_APP_KEY": "orbit-key",
+            "SOKETI_DEFAULT_APP_SECRET": "orbit-secret",
             "SOKETI_USER_AUTHENTICATION_TIMEOUT": "30000"
         }
     },

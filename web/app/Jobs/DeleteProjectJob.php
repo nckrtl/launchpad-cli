@@ -26,13 +26,13 @@ class DeleteProjectJob implements ShouldQueue
 
     public function handle(): void
     {
-        $launchpad = $this->findLaunchpadBinary();
+        $orbit = $this->findOrbitBinary();
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
 
         try {
             // Build the delete command
             // The CLI handles all broadcasting via ReverbBroadcaster
-            $command = "{$launchpad} project:delete --slug=".escapeshellarg($this->slug).' --force --json';
+            $command = "{$orbit} project:delete --slug=".escapeshellarg($this->slug).' --force --json';
 
             if ($this->deleteRepo) {
                 $command .= ' --delete-repo';
@@ -72,16 +72,16 @@ class DeleteProjectJob implements ShouldQueue
         ]);
     }
 
-    private function findLaunchpadBinary(): string
+    private function findOrbitBinary(): string
     {
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
-        $paths = ["{$home}/.local/bin/launchpad", '/usr/local/bin/launchpad', "{$home}/projects/launchpad-cli/launchpad"];
+        $paths = ["{$home}/.local/bin/orbit", '/usr/local/bin/orbit', "{$home}/projects/orbit-cli/orbit"];
         foreach ($paths as $path) {
             if (file_exists($path) && is_executable($path)) {
                 return $path;
             }
         }
 
-        return "{$home}/.local/bin/launchpad";
+        return "{$home}/.local/bin/orbit";
     }
 }

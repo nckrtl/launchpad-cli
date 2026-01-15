@@ -14,7 +14,7 @@ class EnsureCommand extends Command
 
     protected $signature = 'ensure {--json : Output as JSON}';
 
-    protected $description = 'Ensure all Launchpad services are running (containers + Horizon)';
+    protected $description = 'Ensure all Orbit services are running (containers + Horizon)';
 
     /**
      * Required containers mapped to their service keys in DockerManager.
@@ -67,13 +67,13 @@ class EnsureCommand extends Command
         $freshStatuses = $dockerManager->getAllStatuses();
 
         // Horizon is not in the standard CONTAINERS list, check directly
-        if ($dockerManager->isRunning('launchpad-horizon')) {
+        if ($dockerManager->isRunning('orbit-horizon')) {
             $results['horizon'] = true;
         } else {
             $this->logOrOutput('Horizon container not running, attempting to start...', 'warn');
             if ($dockerManager->start('horizon')) {
                 sleep(3);
-                $results['horizon'] = $dockerManager->isRunning('launchpad-horizon');
+                $results['horizon'] = $dockerManager->isRunning('orbit-horizon');
             }
         }
 

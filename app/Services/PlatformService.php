@@ -351,7 +351,7 @@ class PlatformService
     public function configureSystemdResolved(): bool
     {
         $dropInDir = '/etc/systemd/resolved.conf.d';
-        $configFile = "{$dropInDir}/launchpad.conf";
+        $configFile = "{$dropInDir}/orbit.conf";
         $config = "[Resolve]\nDNSStubListener=no\n";
 
         // Create drop-in directory
@@ -583,7 +583,7 @@ class PlatformService
             'name' => 'Supervisor',
             'installed' => $this->hasSupervisor(),
             'version' => null,
-            'required' => 'For Horizon queue worker (optional - launchpad uses Docker)',
+            'required' => 'For Horizon queue worker (optional - orbit uses Docker)',
             'optional' => true,
             'installable' => $this->getPackageManager() !== null,
         ];

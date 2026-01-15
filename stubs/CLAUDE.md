@@ -1,53 +1,53 @@
-# Launchpad
+# Orbit
 
-Local PHP development environment at ~/.config/launchpad/
+Local PHP development environment at ~/.config/orbit/
 
 ## Commands
 
 ```bash
-launchpad start         # Start all services
-launchpad stop          # Stop all services
-launchpad restart       # Restart everything
-launchpad status        # Check service status
-launchpad sites         # List all sites
-launchpad php <site> <version>  # Set PHP version
+orbit start         # Start all services
+orbit stop          # Stop all services
+orbit restart       # Restart everything
+orbit status        # Check service status
+orbit sites         # List all sites
+orbit php <site> <version>  # Set PHP version
 ```
 
 ## Horizon (Queue Worker)
 
-Launchpad includes a web app with Horizon for background job processing. Horizon runs in a Docker container (`launchpad-horizon`).
+Orbit includes a web app with Horizon for background job processing. Horizon runs in a Docker container (`orbit-horizon`).
 
 ```bash
 # Check Horizon status
-launchpad horizon:status
-docker ps | grep launchpad-horizon
+orbit horizon:status
+docker ps | grep orbit-horizon
 
 # Start/Stop Horizon
-launchpad horizon:start
-launchpad horizon:stop
-docker restart launchpad-horizon
+orbit horizon:start
+orbit horizon:stop
+docker restart orbit-horizon
 
 # View logs
-docker logs launchpad-horizon --tail 100 -f
+docker logs orbit-horizon --tail 100 -f
 
 # Access dashboard (when running)
-open https://launchpad.{tld}/horizon
+open https://orbit.{tld}/horizon
 ```
 
-Docker configuration is at `~/.config/launchpad/horizon/docker-compose.yml`.
+Docker configuration is at `~/.config/orbit/horizon/docker-compose.yml`.
 
 ## Direct Docker Access
 
 ```bash
 # Start/stop individual services
-docker compose -f ~/.config/launchpad/php/docker-compose.yml up -d
-docker compose -f ~/.config/launchpad/postgres/docker-compose.yml down
+docker compose -f ~/.config/orbit/php/docker-compose.yml up -d
+docker compose -f ~/.config/orbit/postgres/docker-compose.yml down
 
 # View logs
-docker logs -f launchpad-php-83
-docker logs -f launchpad-caddy
-docker logs -f launchpad-redis
-docker logs -f launchpad-horizon
+docker logs -f orbit-php-83
+docker logs -f orbit-caddy
+docker logs -f orbit-redis
+docker logs -f orbit-horizon
 ```
 
 ## Sites
@@ -63,40 +63,40 @@ echo "8.4" > ~/projects/mysite/.php-version
 Or via CLI:
 
 ```bash
-launchpad php mysite 8.4
+orbit php mysite 8.4
 ```
 
-Then restart: `launchpad restart`
+Then restart: `orbit restart`
 
 ## Add a New Path
 
-1. Edit ~/.config/launchpad/config.json, add path to "paths" array
-2. Edit ~/.config/launchpad/php/docker-compose.yml, add volume mount
-3. Run: `launchpad restart`
+1. Edit ~/.config/orbit/config.json, add path to "paths" array
+2. Edit ~/.config/orbit/php/docker-compose.yml, add volume mount
+3. Run: `orbit restart`
 
 ## Config Locations
 
-- PHP: ~/.config/launchpad/php/php.ini
-- Caddy: ~/.config/launchpad/caddy/Caddyfile
-- Sites: ~/.config/launchpad/config.json
-- DNS: ~/.config/launchpad/dns/Dockerfile
-- Horizon: ~/.config/launchpad/horizon/docker-compose.yml
-- Web app: ~/.config/launchpad/web/
+- PHP: ~/.config/orbit/php/php.ini
+- Caddy: ~/.config/orbit/caddy/Caddyfile
+- Sites: ~/.config/orbit/config.json
+- DNS: ~/.config/orbit/dns/Dockerfile
+- Horizon: ~/.config/orbit/horizon/docker-compose.yml
+- Web app: ~/.config/orbit/web/
 
 ## Troubleshooting
 
 ```bash
 # Check all services
-launchpad status --json | jq .
+orbit status --json | jq .
 
 # Check Horizon specifically
-launchpad horizon:status
-docker logs launchpad-horizon --tail 50
+orbit horizon:status
+docker logs orbit-horizon --tail 50
 
 # Restart everything
-launchpad restart
+orbit restart
 
 # Clear config cache in Horizon container
-docker exec launchpad-horizon php artisan config:clear
-docker restart launchpad-horizon
+docker exec orbit-horizon php artisan config:clear
+docker restart orbit-horizon
 ```

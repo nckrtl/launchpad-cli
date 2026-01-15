@@ -23,7 +23,7 @@ final class ProvisionLogger
     private function initializeLogFile(): void
     {
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
-        $logsDir = "{$home}/.config/launchpad/logs/provision";
+        $logsDir = "{$home}/.config/orbit/logs/provision";
 
         if (! is_dir($logsDir)) {
             mkdir($logsDir, 0755, true);

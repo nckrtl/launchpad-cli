@@ -11,7 +11,7 @@ beforeEach(function () {
 });
 
 it('scans directories and returns all projects', function () {
-    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir.'/project1/public', 0755, true);
     mkdir($tempDir.'/project2/public', 0755, true);
     mkdir($tempDir.'/project3', 0755, true); // no public folder
@@ -47,7 +47,7 @@ it('scans directories and returns all projects', function () {
 });
 
 it('scanSites returns only projects with public folder', function () {
-    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir.'/project1/public', 0755, true);
     mkdir($tempDir.'/project2', 0755, true); // no public folder
 
@@ -71,7 +71,7 @@ it('scanSites returns only projects with public folder', function () {
 });
 
 it('respects php-version file', function () {
-    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir.'/myproject/public', 0755, true);
     file_put_contents($tempDir.'/myproject/.php-version', '8.4');
 
@@ -97,7 +97,7 @@ it('respects php-version file', function () {
 });
 
 it('respects database php version override', function () {
-    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir.'/myproject/public', 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
@@ -122,7 +122,7 @@ it('respects database php version override', function () {
 });
 
 it('finds a project by name', function () {
-    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir.'/myproject/public', 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);
@@ -144,7 +144,7 @@ it('finds a project by name', function () {
 });
 
 it('returns null for non-existent project', function () {
-    $tempDir = sys_get_temp_dir().'/launchpad-test-'.uniqid();
+    $tempDir = sys_get_temp_dir().'/orbit-test-'.uniqid();
     mkdir($tempDir, 0755, true);
 
     $this->configManager->shouldReceive('getPaths')->andReturn([$tempDir]);

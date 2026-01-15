@@ -37,14 +37,14 @@ class CreateProjectJob implements ShouldQueue
 
     public function handle(): void
     {
-        $launchpad = $this->findLaunchpadBinary();
+        $orbit = $this->findOrbitBinary();
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
 
         try {
             $this->broadcast('provisioning');
 
             // Build the provision command
-            $command = "{$launchpad} provision ".escapeshellarg($this->slug);
+            $command = "{$orbit} provision ".escapeshellarg($this->slug);
 
             if ($this->template) {
                 $command .= ' --template='.escapeshellarg($this->template);
@@ -108,17 +108,17 @@ class CreateProjectJob implements ShouldQueue
         $this->broadcast('failed', $exception?->getMessage() ?? 'Unknown error');
     }
 
-    private function findLaunchpadBinary(): string
+    private function findOrbitBinary(): string
     {
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
-        $paths = ["{$home}/.local/bin/launchpad", '/usr/local/bin/launchpad', "{$home}/projects/launchpad-cli/launchpad"];
+        $paths = ["{$home}/.local/bin/orbit", '/usr/local/bin/orbit', "{$home}/projects/orbit-cli/orbit"];
         foreach ($paths as $path) {
             if (file_exists($path) && is_executable($path)) {
                 return $path;
             }
         }
 
-        return "{$home}/.local/bin/launchpad";
+        return "{$home}/.local/bin/orbit";
     }
 
     private function broadcast(string $status, ?string $error = null): void

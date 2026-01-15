@@ -37,7 +37,7 @@ class EnvTemplateResource extends Resource implements HasUriTemplate
 
     public function uriTemplate(): UriTemplate
     {
-        return new UriTemplate('launchpad://env-template/{type}');
+        return new UriTemplate('orbit://env-template/{type}');
     }
 
     public function handle(Request $request): Response
@@ -64,11 +64,11 @@ class EnvTemplateResource extends Resource implements HasUriTemplate
         return <<<'ENV'
 # Database
 DB_CONNECTION=pgsql
-DB_HOST=launchpad-postgres
+DB_HOST=orbit-postgres
 DB_PORT=5432
 DB_DATABASE=your_database_name
-DB_USERNAME=launchpad
-DB_PASSWORD=launchpad
+DB_USERNAME=orbit
+DB_PASSWORD=orbit
 ENV;
     }
 
@@ -76,7 +76,7 @@ ENV;
     {
         return <<<'ENV'
 # Redis
-REDIS_HOST=launchpad-redis
+REDIS_HOST=orbit-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
@@ -97,7 +97,7 @@ ENV;
         return <<<'ENV'
 # Mail (Mailpit)
 MAIL_MAILER=smtp
-MAIL_HOST=launchpad-mailpit
+MAIL_HOST=orbit-mailpit
 MAIL_PORT=1025
 MAIL_USERNAME=null
 MAIL_PASSWORD=null

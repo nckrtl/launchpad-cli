@@ -220,13 +220,13 @@ final class ProjectDeleteCommand extends Command
             return ['success' => true, 'message' => 'No database to drop'];
         }
 
-        $containerCheck = Process::run("docker ps --filter name=launchpad-postgres --format '{{.Names}}' 2>&1");
-        if (! str_contains($containerCheck->output(), 'launchpad-postgres')) {
+        $containerCheck = Process::run("docker ps --filter name=orbit-postgres --format '{{.Names}}' 2>&1");
+        if (! str_contains($containerCheck->output(), 'orbit-postgres')) {
             return ['success' => true, 'message' => 'PostgreSQL container not running'];
         }
 
         $checkResult = Process::run(
-            "docker exec launchpad-postgres psql -U launchpad -tAc \"SELECT 1 FROM pg_database WHERE datname='{$database}'\" 2>&1"
+            "docker exec orbit-postgres psql -U orbit -tAc \"SELECT 1 FROM pg_database WHERE datname='{$database}'\" 2>&1"
         );
 
         if (! str_contains($checkResult->output(), '1')) {
@@ -234,11 +234,11 @@ final class ProjectDeleteCommand extends Command
         }
 
         Process::run(
-            "docker exec launchpad-postgres psql -U launchpad -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{$database}' AND pid <> pg_backend_pid();\" 2>&1"
+            "docker exec orbit-postgres psql -U orbit -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{$database}' AND pid <> pg_backend_pid();\" 2>&1"
         );
 
         $result = Process::run(
-            "docker exec launchpad-postgres psql -U launchpad -c \"DROP DATABASE IF EXISTS \\\"{$database}\\\";\" 2>&1"
+            "docker exec orbit-postgres psql -U orbit -c \"DROP DATABASE IF EXISTS \\\"{$database}\\\";\" 2>&1"
         );
 
         if ($result->successful()) {

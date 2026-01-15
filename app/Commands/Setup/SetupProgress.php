@@ -82,10 +82,10 @@ trait SetupProgress
             $this->outputJson([
                 'type' => 'complete',
                 'success' => true,
-                'message' => 'Launchpad setup complete!',
+                'message' => 'Orbit setup complete!',
             ]);
         } else {
-            $this->output->writeln('<info>Launchpad setup complete!</info>');
+            $this->output->writeln('<info>Orbit setup complete!</info>');
         }
     }
 

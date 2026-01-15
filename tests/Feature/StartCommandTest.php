@@ -21,7 +21,7 @@ it('starts all services successfully', function () {
     $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
 
     $this->artisan('start')
-        ->expectsOutputToContain('Launchpad is running')
+        ->expectsOutputToContain('Orbit is running')
         ->assertExitCode(0);
 });
 

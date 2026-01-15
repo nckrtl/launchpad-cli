@@ -38,7 +38,7 @@ class ProjectCreateTool extends Tool
         }
 
         // Build the command
-        $command = 'launchpad project:create '.escapeshellarg((string) $name);
+        $command = 'orbit project:create '.escapeshellarg((string) $name);
 
         if ($template) {
             $command .= ' --template='.escapeshellarg((string) $template);

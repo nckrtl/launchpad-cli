@@ -36,7 +36,7 @@ class InitCommand extends Command
     ): int {
         $this->autoConfirm = $this->option('yes');
 
-        info('Initializing Launchpad...');
+        info('Initializing Orbit...');
         $this->newLine();
 
         // Check and install prerequisites
@@ -352,7 +352,7 @@ class InitCommand extends Command
         }
 
         $this->newLine();
-        info('Done! Run: launchpad start');
+        info('Done! Run: orbit start');
         $this->line("  Your sites will be available at https://*.{$tld}");
     }
 
@@ -477,11 +477,11 @@ class InitCommand extends Command
         $appKey = 'base64:'.base64_encode(random_bytes(32));
 
         $env = <<<ENV
-APP_NAME=Launchpad
+APP_NAME=Orbit
 APP_ENV=production
 APP_KEY={$appKey}
 APP_DEBUG=false
-APP_URL=https://launchpad.{$tld}
+APP_URL=https://orbit.{$tld}
 
 LOG_CHANNEL=single
 LOG_LEVEL=error
@@ -491,7 +491,7 @@ DB_CONNECTION=null
 
 # Redis for everything
 REDIS_CLIENT=phpredis
-REDIS_HOST=launchpad-redis
+REDIS_HOST=orbit-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
@@ -522,11 +522,11 @@ ENV;
 
     protected function configureHosts(): bool
     {
-        $hostsEntry = '127.0.0.1 launchpad-redis';
+        $hostsEntry = '127.0.0.1 orbit-redis';
         $hostsFile = '/etc/hosts';
 
         // Check if entry already exists
-        $result = Process::run("grep -q 'launchpad-redis' {$hostsFile}");
+        $result = Process::run("grep -q 'orbit-redis' {$hostsFile}");
         if ($result->successful()) {
             // Entry already exists
             return true;

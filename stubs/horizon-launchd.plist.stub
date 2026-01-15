@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.launchpad.horizon</string>
+    <string>com.orbit.horizon</string>
     <key>ProgramArguments</key>
     <array>
-        <string>LAUNCHPAD_PHP_BIN</string>
+        <string>ORBIT_PHP_BIN</string>
         <string>artisan</string>
         <string>horizon</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>LAUNCHPAD_WEB_PATH</string>
+    <string>ORBIT_WEB_PATH</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
@@ -19,11 +19,11 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>LAUNCHPAD_ENV_PATH</string>
+        <string>ORBIT_ENV_PATH</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>LAUNCHPAD_LOG_PATH</string>
+    <string>ORBIT_LOG_PATH</string>
     <key>StandardErrorPath</key>
-    <string>LAUNCHPAD_LOG_PATH</string>
+    <string>ORBIT_LOG_PATH</string>
 </dict>
 </plist>

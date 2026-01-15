@@ -3,23 +3,23 @@
 use App\Services\ProvisionLogger;
 
 beforeEach(function () {
-    $this->logDir = sys_get_temp_dir().'/launchpad-tests/logs';
+    $this->logDir = sys_get_temp_dir().'/orbit-tests/logs';
     @mkdir($this->logDir, 0755, true);
 });
 
 afterEach(function () {
-    deleteDirectory(sys_get_temp_dir().'/launchpad-tests');
+    deleteDirectory(sys_get_temp_dir().'/orbit-tests');
 });
 
 it('creates log file when slug is provided', function () {
     // Override HOME for this test
     $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/launchpad-tests';
+    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
 
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->info('Test message');
 
-    $logFile = sys_get_temp_dir().'/launchpad-tests/.config/launchpad/logs/provision/test-project.log';
+    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
     expect(file_exists($logFile))->toBeTrue();
     expect(file_get_contents($logFile))->toContain('Test message');
 
@@ -30,12 +30,12 @@ it('creates log file when slug is provided', function () {
 
 it('logs info messages', function () {
     $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/launchpad-tests';
+    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
 
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->info('Info message');
 
-    $logFile = sys_get_temp_dir().'/launchpad-tests/.config/launchpad/logs/provision/test-project.log';
+    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
     $content = file_get_contents($logFile);
     expect($content)->toContain('Info message');
 
@@ -46,12 +46,12 @@ it('logs info messages', function () {
 
 it('logs warning messages with prefix', function () {
     $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/launchpad-tests';
+    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
 
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->warn('Warning message');
 
-    $logFile = sys_get_temp_dir().'/launchpad-tests/.config/launchpad/logs/provision/test-project.log';
+    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
     $content = file_get_contents($logFile);
     expect($content)->toContain('WARNING: Warning message');
 
@@ -62,12 +62,12 @@ it('logs warning messages with prefix', function () {
 
 it('logs error messages with prefix', function () {
     $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/launchpad-tests';
+    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
 
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->error('Error message');
 
-    $logFile = sys_get_temp_dir().'/launchpad-tests/.config/launchpad/logs/provision/test-project.log';
+    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
     $content = file_get_contents($logFile);
     expect($content)->toContain('ERROR: Error message');
 
@@ -78,12 +78,12 @@ it('logs error messages with prefix', function () {
 
 it('logs status broadcasts', function () {
     $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/launchpad-tests';
+    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
 
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->broadcast('installing_composer');
 
-    $logFile = sys_get_temp_dir().'/launchpad-tests/.config/launchpad/logs/provision/test-project.log';
+    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
     $content = file_get_contents($logFile);
     expect($content)->toContain('Status: installing_composer');
 
@@ -94,12 +94,12 @@ it('logs status broadcasts', function () {
 
 it('logs broadcast with error', function () {
     $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/launchpad-tests';
+    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
 
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->broadcast('failed', 'Something went wrong');
 
-    $logFile = sys_get_temp_dir().'/launchpad-tests/.config/launchpad/logs/provision/test-project.log';
+    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
     $content = file_get_contents($logFile);
     expect($content)->toContain('Status: failed - Error: Something went wrong');
 

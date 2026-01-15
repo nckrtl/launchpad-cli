@@ -13,9 +13,9 @@ use Laravel\Mcp\Server\Tool;
 
 final class StartTool extends Tool
 {
-    protected string $name = 'launchpad_start';
+    protected string $name = 'orbit_start';
 
-    protected string $description = 'Start all Launchpad Docker services (DNS, PHP, Caddy, PostgreSQL, Redis, Mailpit, and enabled optional services)';
+    protected string $description = 'Start all Orbit Docker services (DNS, PHP, Caddy, PostgreSQL, Redis, Mailpit, and enabled optional services)';
 
     public function __construct(
         protected DockerManager $dockerManager,
@@ -33,7 +33,7 @@ final class StartTool extends Tool
 
             return Response::structured([
                 'success' => true,
-                'message' => 'All Launchpad services started successfully',
+                'message' => 'All Orbit services started successfully',
             ]);
         } catch (\Exception $e) {
             return Response::structured([

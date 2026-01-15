@@ -8,14 +8,14 @@ fi
 
 # Create/update .env file with Reverb settings
 cat > /app/.env << EOF
-APP_NAME=LaunchpadReverb
+APP_NAME=OrbitReverb
 APP_ENV=local
 APP_KEY=${APP_KEY}
 APP_DEBUG=true
 
-REVERB_APP_ID=${REVERB_APP_ID:-launchpad}
-REVERB_APP_KEY=${REVERB_APP_KEY:-launchpad-key}
-REVERB_APP_SECRET=${REVERB_APP_SECRET:-launchpad-secret}
+REVERB_APP_ID=${REVERB_APP_ID:-orbit}
+REVERB_APP_KEY=${REVERB_APP_KEY:-orbit-key}
+REVERB_APP_SECRET=${REVERB_APP_SECRET:-orbit-secret}
 REVERB_HOST=${REVERB_HOST:-0.0.0.0}
 REVERB_PORT=${REVERB_PORT:-6001}
 REVERB_SCHEME=http

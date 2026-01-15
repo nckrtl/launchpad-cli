@@ -23,7 +23,7 @@ require __DIR__.'/../vendor/autoload.php';
 $keepProject = in_array('--keep', $argv);
 $tld = getenv('TLD') ?: 'ccc';
 $slug = 'e2e-desktop-'.time();
-$apiBase = "https://launchpad.{$tld}/api";
+$apiBase = "https://orbit.{$tld}/api";
 
 $provisionEvents = [];
 $deletionEvents = [];
@@ -36,9 +36,9 @@ echo "Template: hardimpactdev/liftoff-starterkit\n\n";
 
 // Verify Reverb is accessible
 $pusher = new Pusher\Pusher(
-    'launchpad-key',
-    'launchpad-secret',
-    'launchpad',
+    'orbit-key',
+    'orbit-secret',
+    'orbit',
     ['host' => "reverb.{$tld}", 'port' => 443, 'scheme' => 'https', 'useTLS' => true, 'cluster' => 'mt1']
 );
 
@@ -48,7 +48,7 @@ try {
     echo "  OK - Reverb is accessible\n\n";
 } catch (Exception $e) {
     echo '  FAIL: '.$e->getMessage()."\n";
-    echo "  Make sure launchpad-reverb container is running\n";
+    echo "  Make sure orbit-reverb container is running\n";
     exit(1);
 }
 
@@ -111,7 +111,7 @@ function getLoggedStatuses(string $slug, string $type): array
 {
     $home = $_SERVER['HOME'] ?? '/home/launchpad';
     $logDir = $type === 'provision' ? 'provision' : 'deletion';
-    $logFile = "{$home}/.config/launchpad/logs/{$logDir}/{$slug}.log";
+    $logFile = "{$home}/.config/orbit/logs/{$logDir}/{$slug}.log";
 
     if (! file_exists($logFile)) {
         return [];
@@ -131,7 +131,7 @@ function checkDatabaseTables(string $slug): array
     $requiredTables = ['users', 'sessions', 'migrations', 'jobs', 'password_reset_tokens'];
     $missing = [];
 
-    $output = shell_exec("docker exec launchpad-postgres psql -U launchpad -d {$slug} -tAc \"SELECT tablename FROM pg_tables WHERE schemaname = 'public'\" 2>&1");
+    $output = shell_exec("docker exec orbit-postgres psql -U orbit -d {$slug} -tAc \"SELECT tablename FROM pg_tables WHERE schemaname = 'public'\" 2>&1");
 
     if (strpos($output, 'does not exist') !== false) {
         return ['error' => 'Database does not exist'];

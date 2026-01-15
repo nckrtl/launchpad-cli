@@ -30,7 +30,7 @@ class LogsTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'service' => $schema->string()->required()->description('Container name (e.g., launchpad-caddy, launchpad-php-83)'),
+            'service' => $schema->string()->required()->description('Container name (e.g., orbit-caddy, orbit-php-83)'),
             'lines' => $schema->integer()->default(100)->min(1)->max(1000)->description('Number of lines to retrieve (1-1000)'),
         ];
     }

@@ -20,7 +20,7 @@ class ProjectApiTest extends TestCase
     public function test_create_project_rejects_reserved_name(): void
     {
         $response = $this->postJson('/api/projects', [
-            'name' => 'launchpad',
+            'name' => 'orbit',
             'visibility' => 'private',
         ]);
 

@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Process;
 
 class HorizonManager
 {
-    protected const SYSTEMD_SERVICE_NAME = 'launchpad-horizon';
+    protected const SYSTEMD_SERVICE_NAME = 'orbit-horizon';
 
-    protected const LAUNCHD_LABEL = 'com.launchpad.horizon';
+    protected const LAUNCHD_LABEL = 'com.orbit.horizon';
 
     public function __construct(
         protected ConfigManager $configManager,
@@ -199,11 +199,11 @@ class HorizonManager
 
         // Replace placeholders
         $service = str_replace([
-            'LAUNCHPAD_USER',
-            'LAUNCHPAD_GROUP',
-            'LAUNCHPAD_WEB_PATH',
-            'LAUNCHPAD_PHP_BIN',
-            'LAUNCHPAD_ENV_PATH',
+            'ORBIT_USER',
+            'ORBIT_GROUP',
+            'ORBIT_WEB_PATH',
+            'ORBIT_PHP_BIN',
+            'ORBIT_ENV_PATH',
         ], [
             $this->phpManager->getAdapter()->getUser(),
             $this->phpManager->getAdapter()->getGroup(),
@@ -241,10 +241,10 @@ class HorizonManager
 
         // Replace placeholders
         $plist = str_replace([
-            'LAUNCHPAD_WEB_PATH',
-            'LAUNCHPAD_PHP_BIN',
-            'LAUNCHPAD_ENV_PATH',
-            'LAUNCHPAD_LOG_PATH',
+            'ORBIT_WEB_PATH',
+            'ORBIT_PHP_BIN',
+            'ORBIT_ENV_PATH',
+            'ORBIT_LOG_PATH',
         ], [
             $this->configManager->getWebAppPath(),
             trim(shell_exec('which php')),

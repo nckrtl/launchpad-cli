@@ -12,7 +12,7 @@ it('stops all services successfully', function () {
     $this->dockerManager->shouldReceive('stop')->times(7)->andReturn(true);
 
     $this->artisan('stop')
-        ->expectsOutputToContain('Launchpad stopped')
+        ->expectsOutputToContain('Orbit stopped')
         ->assertExitCode(0);
 });
 

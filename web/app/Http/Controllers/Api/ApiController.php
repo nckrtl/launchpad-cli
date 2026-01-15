@@ -11,15 +11,15 @@ use Illuminate\Support\Facades\Process;
 class ApiController extends Controller
 {
     /**
-     * Execute a launchpad CLI command and return JSON response.
+     * Execute an orbit CLI command and return JSON response.
      */
     protected function executeCommand(string $command, array $args = [], int $timeout = 30): array
     {
-        $launchpad = $this->findLaunchpadBinary();
+        $orbit = $this->findOrbitBinary();
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
 
         // Build command string
-        $cmd = "{$launchpad} {$command}";
+        $cmd = "{$orbit} {$command}";
         foreach ($args as $key => $value) {
             if (is_bool($value)) {
                 if ($value) {
@@ -62,18 +62,18 @@ class ApiController extends Controller
     }
 
     /**
-     * Find the launchpad binary.
+     * Find the orbit binary.
      */
-    protected function findLaunchpadBinary(): string
+    protected function findOrbitBinary(): string
     {
         $home = $_SERVER['HOME'] ?? '/home/launchpad';
         $paths = [
             // Container paths
-            '/usr/local/bin/launchpad',
+            '/usr/local/bin/orbit',
             // Host paths
-            "{$home}/.local/bin/launchpad",
-            '/usr/local/bin/launchpad',
-            "{$home}/projects/launchpad-cli/launchpad",
+            "{$home}/.local/bin/orbit",
+            '/usr/local/bin/orbit',
+            "{$home}/projects/orbit-cli/orbit",
         ];
 
         foreach ($paths as $path) {
@@ -82,13 +82,13 @@ class ApiController extends Controller
             }
         }
 
-        return '/usr/local/bin/launchpad';
+        return '/usr/local/bin/orbit';
     }
 
     // ===== Status & Info =====
 
     /**
-     * Get launchpad status.
+     * Get orbit status.
      */
     public function status(): JsonResponse
     {
@@ -156,12 +156,12 @@ class ApiController extends Controller
     public function phpVersions(): JsonResponse
     {
         // Get available PHP versions from running containers
-        $result = Process::timeout(10)->run('docker ps --format "{{.Names}}" 2>/dev/null | grep launchpad-php');
+        $result = Process::timeout(10)->run('docker ps --format "{{.Names}}" 2>/dev/null | grep orbit-php');
 
         $versions = [];
         if ($result->successful()) {
             foreach (explode("\n", trim($result->output())) as $container) {
-                if (preg_match('/launchpad-php-(\d+)$/', $container, $matches)) {
+                if (preg_match('/orbit-php-(\d+)$/', $container, $matches)) {
                     $version = $matches[1];
                     // Convert 83 to 8.3, 84 to 8.4, etc.
                     if (strlen($version) === 2) {

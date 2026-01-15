@@ -21,7 +21,7 @@ class SetupCommand extends Command
         {--skip-docker : Skip Docker/OrbStack installation}
         {--json : Output progress as JSON for programmatic consumption}';
 
-    protected $description = 'Set up Launchpad on this machine (auto-detects Mac/Linux)';
+    protected $description = 'Set up Orbit on this machine (auto-detects Mac/Linux)';
 
     public function handle(
         ConfigManager $configManager,

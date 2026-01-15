@@ -19,13 +19,13 @@ class DatabaseService
     protected function getDefaultDbPath(): string
     {
         // Allow override via environment variable for testing
-        if ($testDbPath = getenv('LAUNCHPAD_TEST_DB')) {
+        if ($testDbPath = getenv('ORBIT_TEST_DB')) {
             return $testDbPath;
         }
 
         $home = $_SERVER['HOME'] ?? getenv('HOME') ?: '/tmp';
 
-        return "{$home}/.config/launchpad/database.sqlite";
+        return "{$home}/.config/orbit/database.sqlite";
     }
 
     protected function initDatabase(): void

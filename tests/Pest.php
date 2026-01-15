@@ -32,7 +32,7 @@ expect()->extend('toBeOne', function () {
  */
 function createTestProject(string $slug): string
 {
-    $basePath = sys_get_temp_dir().'/launchpad-tests/'.$slug;
+    $basePath = sys_get_temp_dir().'/orbit-tests/'.$slug;
 
     // Clean up if exists
     if (is_dir($basePath)) {
@@ -130,7 +130,7 @@ function testDatabase(): DatabaseService
  */
 function cleanupTestProjects(): void
 {
-    $testDir = sys_get_temp_dir().'/launchpad-tests';
+    $testDir = sys_get_temp_dir().'/orbit-tests';
     if (is_dir($testDir)) {
         deleteDirectory($testDir);
     }

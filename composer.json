@@ -1,8 +1,8 @@
 {
-    "name": "nckrtl/launchpad-cli",
+    "name": "nckrtl/orbit-cli",
     "description": "Local PHP development environment powered by Docker",
     "keywords": ["php", "docker", "development", "local", "cli"],
-    "homepage": "https://github.com/nckrtl/launchpad-cli",
+    "homepage": "https://github.com/nckrtl/orbit-cli",
     "type": "project",
     "license": "MIT",
     "authors": [
@@ -48,5 +48,5 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "bin": ["launchpad"]
+    "bin": ["orbit"]
 }

@@ -28,7 +28,7 @@ class DockerManager
     }
 
     /**
-     * Get status and health for all launchpad containers in a single batch query.
+     * Get status and health for all orbit containers in a single batch query.
      * This is much faster than calling isRunning() and getHealthStatus() individually.
      *
      * @return array<string, array{running: bool, health: ?string, container: string}>
@@ -41,9 +41,9 @@ class DockerManager
 
         $statuses = [];
 
-        // Single query to get all running launchpad containers with their health status
+        // Single query to get all running orbit containers with their health status
         $result = Process::run(
-            "docker ps --filter 'name=launchpad-' --format '{{.Names}}|{{if .Status}}{{.Status}}{{end}}' 2>/dev/null"
+            "docker ps --filter 'name=orbit-' --format '{{.Names}}|{{if .Status}}{{.Status}}{{end}}' 2>/dev/null"
         );
 
         if (! $result->successful()) {
@@ -58,8 +58,8 @@ class DockerManager
             [$containerName] = explode('|', $line, 2);
             $runningContainers[] = $containerName;
 
-            // Extract service name from container name (launchpad-redis -> redis)
-            $serviceName = str_replace('launchpad-', '', $containerName);
+            // Extract service name from container name (orbit-redis -> redis)
+            $serviceName = str_replace('orbit-', '', $containerName);
             $statuses[$serviceName] = [
                 'running' => true,
                 'health' => null,
@@ -83,7 +83,7 @@ class DockerManager
                     $containerName = ltrim($containerName, '/'); // docker inspect returns /container_name
 
                     // Extract service name
-                    $serviceName = str_replace('launchpad-', '', $containerName);
+                    $serviceName = str_replace('orbit-', '', $containerName);
 
                     if (isset($statuses[$serviceName])) {
                         $statuses[$serviceName]['health'] = $health === 'none' ? null : $health;
@@ -111,7 +111,7 @@ class DockerManager
         $composePath = $this->configManager->getConfigPath().'/docker-compose.yaml';
 
         if (! file_exists($composePath)) {
-            $this->lastError = "docker-compose.yaml not found. Run 'launchpad init' first.";
+            $this->lastError = "docker-compose.yaml not found. Run 'orbit init' first.";
 
             return;
         }
@@ -228,14 +228,14 @@ class DockerManager
     public function createNetwork(): bool
     {
         // Check if network exists
-        $result = Process::run('docker network inspect launchpad 2>/dev/null');
+        $result = Process::run('docker network inspect orbit 2>/dev/null');
 
         if ($result->successful()) {
             return true; // Network already exists
         }
 
         // Create network
-        $result = Process::run('docker network create launchpad');
+        $result = Process::run('docker network create orbit');
 
         return $result->successful();
     }
@@ -248,7 +248,7 @@ class DockerManager
     {
         // Use cache if available
         if ($this->statusCache !== null) {
-            $serviceName = str_replace('launchpad-', '', $container);
+            $serviceName = str_replace('orbit-', '', $container);
             if (isset($this->statusCache[$serviceName])) {
                 return $this->statusCache[$serviceName]['running'];
             }
@@ -269,7 +269,7 @@ class DockerManager
     {
         // Use cache if available
         if ($this->statusCache !== null) {
-            $serviceName = str_replace('launchpad-', '', $container);
+            $serviceName = str_replace('orbit-', '', $container);
             if (isset($this->statusCache[$serviceName])) {
                 return $this->statusCache[$serviceName]['health'];
             }

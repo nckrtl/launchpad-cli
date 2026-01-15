@@ -11,7 +11,7 @@ class RestartCommand extends Command
 
     protected $signature = 'restart {--json : Output as JSON}';
 
-    protected $description = 'Restart all Launchpad services';
+    protected $description = 'Restart all Orbit services';
 
     public function handle(): int
     {

@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Resource;
 
 class SitesResource extends Resource
 {
-    protected string $uri = 'launchpad://sites';
+    protected string $uri = 'orbit://sites';
 
     protected string $mimeType = 'application/json';
 

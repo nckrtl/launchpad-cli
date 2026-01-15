@@ -11,7 +11,7 @@ use Laravel\Mcp\Server\Resource;
 
 class ConfigResource extends Resource
 {
-    protected string $uri = 'launchpad://config';
+    protected string $uri = 'orbit://config';
 
     protected string $mimeType = 'application/json';
 
@@ -32,7 +32,7 @@ class ConfigResource extends Resource
 
     public function description(): string
     {
-        return 'Current Launchpad configuration including TLD, default PHP version, paths, and enabled services.';
+        return 'Current Orbit configuration including TLD, default PHP version, paths, and enabled services.';
     }
 
     public function handle(Request $request): Response

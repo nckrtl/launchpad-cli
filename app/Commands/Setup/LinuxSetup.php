@@ -369,7 +369,7 @@ class LinuxSetup
 
         $result = Process::run("echo '{$importLine}' | sudo tee {$systemCaddyfile}");
         if ($result->successful()) {
-            $this->progressInfo('Configured Caddy to import Launchpad config');
+            $this->progressInfo('Configured Caddy to import Orbit config');
         }
 
         return true;

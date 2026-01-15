@@ -5,13 +5,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Process;
 
 beforeEach(function () {
-    $this->tempDir = sys_get_temp_dir().'/launchpad-project-test-'.uniqid();
+    $this->tempDir = sys_get_temp_dir().'/orbit-project-test-'.uniqid();
     mkdir($this->tempDir, 0755, true);
 
     $this->configManager = Mockery::mock(ConfigManager::class)->makePartial();
     $this->configManager->shouldReceive('getPaths')->andReturn([$this->tempDir]);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
-    $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir.'/.config/launchpad');
+    $this->configManager->shouldReceive('getConfigPath')->andReturn($this->tempDir.'/.config/orbit');
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
     $this->configManager->shouldReceive('get')->with('sequence.url', 'http://localhost:8000')->andReturn('http://localhost:8000');
     $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
@@ -20,13 +20,13 @@ beforeEach(function () {
 
     // Set HOME to temp for ProvisionLogger
     $_SERVER['HOME'] = '/tmp';
-    @mkdir('/tmp/.config/launchpad/logs/provision', 0755, true);
+    @mkdir('/tmp/.config/orbit/logs/provision', 0755, true);
 });
 
 afterEach(function () {
     \Illuminate\Support\Facades\File::deleteDirectory($this->tempDir);
     // Clean up log files
-    @unlink('/tmp/.config/launchpad/logs/provision/test-project.log');
+    @unlink('/tmp/.config/orbit/logs/provision/test-project.log');
 });
 
 it('runs project:create command with repo argument', function () {

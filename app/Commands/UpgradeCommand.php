@@ -17,9 +17,9 @@ class UpgradeCommand extends Command
         {--check : Only check for updates without installing}
         {--json : Output as JSON}';
 
-    protected $description = 'Upgrade Launchpad to the latest version';
+    protected $description = 'Upgrade Orbit to the latest version';
 
-    private const GITHUB_API_URL = 'https://api.github.com/repos/nckrtl/launchpad-cli/releases/latest';
+    private const GITHUB_API_URL = 'https://api.github.com/repos/nckrtl/orbit-cli/releases/latest';
 
     public function handle(ConfigManager $configManager): int
     {
@@ -82,7 +82,7 @@ class UpgradeCommand extends Command
             $this->info("Upgrading from {$currentVersion} to {$latestVersion}...");
         }
 
-        $tempFile = tempnam(sys_get_temp_dir(), 'launchpad_');
+        $tempFile = tempnam(sys_get_temp_dir(), 'orbit_');
         if ($tempFile === false) {
             return $this->handleError(
                 'Failed to create temporary file.',
@@ -232,11 +232,11 @@ class UpgradeCommand extends Command
         $appKey = $existingEnv['APP_KEY'] ?? 'base64:'.base64_encode(random_bytes(32));
 
         $env = <<<ENV
-APP_NAME=Launchpad
+APP_NAME=Orbit
 APP_ENV=production
 APP_KEY={$appKey}
 APP_DEBUG=false
-APP_URL=https://launchpad.{$tld}
+APP_URL=https://orbit.{$tld}
 
 LOG_CHANNEL=single
 LOG_LEVEL=error
@@ -246,7 +246,7 @@ DB_CONNECTION=null
 
 # Redis for everything
 REDIS_CLIENT=phpredis
-REDIS_HOST=launchpad-redis
+REDIS_HOST=orbit-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
@@ -282,7 +282,7 @@ ENV;
     {
         $context = stream_context_create([
             'http' => [
-                'header' => "User-Agent: launchpad-cli\r\n",
+                'header' => "User-Agent: orbit-cli\r\n",
                 'timeout' => 30,
             ],
         ]);
@@ -322,7 +322,7 @@ ENV;
 
         foreach ($assets as $asset) {
             $name = $asset['name'] ?? '';
-            if ($name === 'launchpad.phar') {
+            if ($name === 'orbit.phar') {
                 return $asset['browser_download_url'] ?? null;
             }
         }
@@ -334,7 +334,7 @@ ENV;
     {
         $context = stream_context_create([
             'http' => [
-                'header' => "User-Agent: launchpad-cli\r\n",
+                'header' => "User-Agent: orbit-cli\r\n",
                 'timeout' => 120,
                 'follow_location' => true,
             ],
@@ -416,7 +416,7 @@ ENV;
         if ($isUpToDate) {
             $this->info('You are up to date!');
         } else {
-            $this->warn('An update is available. Run `launchpad upgrade` to install.');
+            $this->warn('An update is available. Run `orbit upgrade` to install.');
         }
 
         return self::SUCCESS;

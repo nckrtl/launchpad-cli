@@ -5,7 +5,7 @@ use App\Services\PhpComposeGenerator;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
-    $this->tempDir = sys_get_temp_dir().'/launchpad-compose-test-'.uniqid();
+    $this->tempDir = sys_get_temp_dir().'/orbit-compose-test-'.uniqid();
     mkdir($this->tempDir.'/php', 0755, true);
 
     $this->configManager = Mockery::mock(ConfigManager::class);
@@ -33,14 +33,14 @@ it('generates docker-compose with volume mounts', function () {
     expect($compose)->toContain('build:');
     expect($compose)->toContain('Dockerfile.php83');
     expect($compose)->toContain('Dockerfile.php84');
-    expect($compose)->toContain('image: launchpad-php:8.3');
-    expect($compose)->toContain('image: launchpad-php:8.4');
-    expect($compose)->toContain('launchpad-php-83');
-    expect($compose)->toContain('launchpad-php-84');
+    expect($compose)->toContain('image: orbit-php:8.3');
+    expect($compose)->toContain('image: orbit-php:8.4');
+    expect($compose)->toContain('orbit-php-83');
+    expect($compose)->toContain('orbit-php-84');
     expect($compose)->toContain('/home/user/Projects:/home/user/Projects');
     expect($compose)->toContain('/home/user/Work:/home/user/Work');
     expect($compose)->toContain('networks:');
-    expect($compose)->toContain('launchpad');
+    expect($compose)->toContain('orbit');
 });
 
 it('expands tilde paths', function () {

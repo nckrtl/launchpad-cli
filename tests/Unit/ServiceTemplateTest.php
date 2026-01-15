@@ -127,7 +127,7 @@ describe('ServiceTemplate DTO', function () {
 
 describe('ServiceTemplateLoader', function () {
     beforeEach(function () {
-        $this->testDir = sys_get_temp_dir().'/launchpad-template-tests-'.uniqid();
+        $this->testDir = sys_get_temp_dir().'/orbit-template-tests-'.uniqid();
         @mkdir($this->testDir, 0755, true);
         $this->loader = new ServiceTemplateLoader($this->testDir);
     });

@@ -6,7 +6,7 @@ use App\Services\ServiceTemplateLoader;
 
 describe('ComposeGenerator', function () {
     beforeEach(function () {
-        $this->testDir = sys_get_temp_dir().'/launchpad-compose-tests-'.uniqid();
+        $this->testDir = sys_get_temp_dir().'/orbit-compose-tests-'.uniqid();
         @mkdir($this->testDir, 0755, true);
 
         // Create mock ConfigManager
@@ -74,10 +74,10 @@ describe('ComposeGenerator', function () {
         expect($yaml)->toContain('version:')
             ->and($yaml)->toContain('services:')
             ->and($yaml)->toContain('redis:')
-            ->and($yaml)->toContain('container_name: launchpad-redis')
+            ->and($yaml)->toContain('container_name: orbit-redis')
             ->and($yaml)->toContain('image: "redis:7.4"')
             ->and($yaml)->toContain('networks:')
-            ->and($yaml)->toContain('- launchpad');
+            ->and($yaml)->toContain('- orbit');
     });
 
     it('skips disabled services', function () {
@@ -91,7 +91,7 @@ describe('ComposeGenerator', function () {
 
         $yaml = $this->generator->generate($services);
 
-        expect($yaml)->not->toContain('container_name: launchpad-redis');
+        expect($yaml)->not->toContain('container_name: orbit-redis');
     });
 
     it('interpolates version variables', function () {
@@ -165,7 +165,7 @@ describe('ComposeGenerator', function () {
         expect($yaml)->toContain('restart: unless-stopped');
     });
 
-    it('includes launchpad network configuration', function () {
+    it('includes orbit network configuration', function () {
         $services = [
             'redis' => [
                 'enabled' => true,
@@ -177,9 +177,9 @@ describe('ComposeGenerator', function () {
         $yaml = $this->generator->generate($services);
 
         expect($yaml)->toContain('networks:')
-            ->and($yaml)->toContain('launchpad:')
+            ->and($yaml)->toContain('orbit:')
             ->and($yaml)->toContain('external: true')
-            ->and($yaml)->toContain('name: launchpad');
+            ->and($yaml)->toContain('name: orbit');
     });
 
     it('sorts services by dependencies', function () {
@@ -210,8 +210,8 @@ describe('ComposeGenerator', function () {
         $yaml = $this->generator->generate($services);
 
         // Redis should appear before postgres in the YAML
-        $redisPos = strpos($yaml, 'container_name: launchpad-redis');
-        $postgresPos = strpos($yaml, 'container_name: launchpad-postgres');
+        $redisPos = strpos($yaml, 'container_name: orbit-redis');
+        $postgresPos = strpos($yaml, 'container_name: orbit-postgres');
 
         expect($redisPos)->toBeLessThan($postgresPos);
     });
@@ -249,7 +249,7 @@ describe('ComposeGenerator', function () {
                 'dockerConfig' => [
                     'image' => 'postgres:${version}',
                     'environment' => [
-                        'POSTGRES_USER' => 'launchpad',
+                        'POSTGRES_USER' => 'orbit',
                         'POSTGRES_PASSWORD' => 'secret',
                     ],
                 ],
@@ -267,7 +267,7 @@ describe('ComposeGenerator', function () {
         $yaml = $this->generator->generate($services);
 
         expect($yaml)->toContain('environment:')
-            ->and($yaml)->toContain('POSTGRES_USER: launchpad')
+            ->and($yaml)->toContain('POSTGRES_USER: orbit')
             ->and($yaml)->toContain('POSTGRES_PASSWORD: secret');
     });
 
@@ -285,7 +285,7 @@ describe('ComposeGenerator', function () {
                 'dockerConfig' => [
                     'image' => 'postgres:${version}',
                     'environment' => [
-                        'POSTGRES_USER' => 'launchpad',
+                        'POSTGRES_USER' => 'orbit',
                     ],
                 ],
                 'dependsOn' => [],
@@ -308,7 +308,7 @@ describe('ComposeGenerator', function () {
 
         $yaml = $this->generator->generate($services);
 
-        expect($yaml)->toContain('POSTGRES_USER: launchpad')
+        expect($yaml)->toContain('POSTGRES_USER: orbit')
             ->and($yaml)->toContain('POSTGRES_PASSWORD: custom-password')
             ->and($yaml)->toContain('POSTGRES_DB: mydb');
     });

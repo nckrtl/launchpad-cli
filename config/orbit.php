@@ -4,22 +4,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Launchpad Configuration Path
+    | Orbit Configuration Path
     |--------------------------------------------------------------------------
     |
-    | This value determines the path where Launchpad stores its configuration
+    | This value determines the path where Orbit stores its configuration
     | and Docker compose files.
     |
     */
 
-    'path' => env('LAUNCHPAD_PATH', getenv('HOME') ?: '/home/launchpad'.'/.config/launchpad'),
+    'path' => env('ORBIT_PATH', getenv('HOME') ?: '/home/launchpad'.'/.config/orbit'),
 
     /*
     |--------------------------------------------------------------------------
     | Supported PHP Versions
     |--------------------------------------------------------------------------
     |
-    | The PHP versions that Launchpad supports. These correspond to the
+    | The PHP versions that Orbit supports. These correspond to the
     | FrankenPHP Docker images that will be pulled during init.
     |
     */

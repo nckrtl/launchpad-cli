@@ -46,11 +46,11 @@ final readonly class ConfigureEnvironment
         // Database configuration
         if ($context->dbDriver === 'pgsql') {
             $env = $this->setEnvValue($env, 'DB_CONNECTION', 'pgsql');
-            $env = $this->setEnvValue($env, 'DB_HOST', 'launchpad-postgres');
+            $env = $this->setEnvValue($env, 'DB_HOST', 'orbit-postgres');
             $env = $this->setEnvValue($env, 'DB_PORT', '5432');
             $env = $this->setEnvValue($env, 'DB_DATABASE', $context->slug);
-            $env = $this->setEnvValue($env, 'DB_USERNAME', 'launchpad');
-            $env = $this->setEnvValue($env, 'DB_PASSWORD', 'launchpad');
+            $env = $this->setEnvValue($env, 'DB_USERNAME', 'orbit');
+            $env = $this->setEnvValue($env, 'DB_PASSWORD', 'orbit');
             $logger->log("Configured PostgreSQL database: {$context->slug}");
         } elseif ($context->dbDriver === 'sqlite') {
             $env = $this->setEnvValue($env, 'DB_CONNECTION', 'sqlite');
@@ -84,7 +84,7 @@ final readonly class ConfigureEnvironment
         ], true);
 
         if ($needsRedis) {
-            $env = $this->setEnvValue($env, 'REDIS_HOST', 'launchpad-redis');
+            $env = $this->setEnvValue($env, 'REDIS_HOST', 'orbit-redis');
             $env = $this->setEnvValue($env, 'REDIS_PORT', '6379');
             $logger->log('Configured Redis connection');
         }

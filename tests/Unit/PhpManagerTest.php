@@ -29,7 +29,7 @@ class PhpManagerTest extends TestCase
 
         $socketPath = $phpManager->getSocketPath('8.4');
         $this->assertStringContainsString('php84.sock', $socketPath);
-        $this->assertStringContainsString('.config/launchpad/php', $socketPath);
+        $this->assertStringContainsString('.config/orbit/php', $socketPath);
     }
 
     public function test_gets_php_binary_path(): void

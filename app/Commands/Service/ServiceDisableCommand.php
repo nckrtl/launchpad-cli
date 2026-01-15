@@ -42,7 +42,7 @@ class ServiceDisableCommand extends Command
 
             $this->newLine();
             $this->info("  Service '{$serviceName}' has been disabled");
-            $this->line("  <fg=gray>The service will not start with 'launchpad start'</>");
+            $this->line("  <fg=gray>The service will not start with 'orbit start'</>");
             $this->newLine();
 
             return self::SUCCESS;

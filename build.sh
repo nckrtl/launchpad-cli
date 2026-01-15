@@ -11,4 +11,4 @@ echo "Restoring dev dependencies..."
 composer install --no-interaction
 
 echo "Done! Phar size:"
-ls -lh builds/launchpad.phar
+ls -lh builds/orbit.phar

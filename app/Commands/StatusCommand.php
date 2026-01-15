@@ -18,7 +18,7 @@ class StatusCommand extends Command
 
     protected $signature = 'status {--json : Output as JSON}';
 
-    protected $description = 'Show Launchpad status and running services';
+    protected $description = 'Show Orbit status and running services';
 
     public function handle(
         ServiceManager $serviceManager,
@@ -99,7 +99,7 @@ class StatusCommand extends Command
         $allStatuses = $dockerManager->getAllStatuses();
 
         foreach ($enabledServices as $name => $config) {
-            $status = $allStatuses[$name] ?? ['running' => false, 'health' => null, 'container' => "launchpad-{$name}"];
+            $status = $allStatuses[$name] ?? ['running' => false, 'health' => null, 'container' => "orbit-{$name}"];
             $services[$name] = [
                 'status' => $status['running'] ? 'running' : 'stopped',
                 'health' => $status['health'],
@@ -139,9 +139,9 @@ class StatusCommand extends Command
         $this->newLine();
 
         if ($isRunning) {
-            $this->info("  Launchpad is running ({$runningCount}/".count($services).' services)');
+            $this->info("  Orbit is running ({$runningCount}/".count($services).' services)');
         } else {
-            $this->warn('  Launchpad is stopped');
+            $this->warn('  Orbit is stopped');
         }
 
         $this->newLine();

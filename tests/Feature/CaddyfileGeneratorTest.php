@@ -6,7 +6,7 @@ use App\Services\SiteScanner;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
-    $this->tempDir = sys_get_temp_dir().'/launchpad-caddy-test-'.uniqid();
+    $this->tempDir = sys_get_temp_dir().'/orbit-caddy-test-'.uniqid();
     mkdir($this->tempDir.'/caddy', 0755, true);
     mkdir($this->tempDir.'/php', 0755, true);
 
@@ -54,8 +54,8 @@ it('generates caddyfile with sites', function () {
     expect($caddyfile)->toContain('local_certs');
     expect($caddyfile)->toContain('mysite.test');
     expect($caddyfile)->toContain('another.test');
-    expect($caddyfile)->toContain('launchpad-php-83');
-    expect($caddyfile)->toContain('launchpad-php-84');
+    expect($caddyfile)->toContain('orbit-php-83');
+    expect($caddyfile)->toContain('orbit-php-84');
 });
 
 it('generates php caddyfile with document roots', function () {

@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 final class SitesTool extends Tool
 {
-    protected string $name = 'launchpad_sites';
+    protected string $name = 'orbit_sites';
 
     protected string $description = 'List all registered sites with their domains, paths, PHP versions, and configuration details';
 

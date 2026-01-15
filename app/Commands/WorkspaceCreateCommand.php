@@ -31,7 +31,7 @@ class WorkspaceCreateCommand extends Command
             }
 
             $this->info("Workspace '{$name}' created at: {$workspace['path']}");
-            $this->line("Add projects with: launchpad workspace:add {$name} <project>");
+            $this->line("Add projects with: orbit workspace:add {$name} <project>");
 
             return self::SUCCESS;
         } catch (\RuntimeException $e) {

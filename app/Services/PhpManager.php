@@ -108,13 +108,13 @@ class PhpManager
 
         // Replace placeholders
         $config = str_replace([
-            'LAUNCHPAD_PHP_VERSION',
-            'LAUNCHPAD_USER',
-            'LAUNCHPAD_GROUP',
-            'LAUNCHPAD_SOCKET_PATH',
-            'LAUNCHPAD_LOG_PATH',
-            'LAUNCHPAD_ENV_PATH',
-            'LAUNCHPAD_HOME',
+            'ORBIT_PHP_VERSION',
+            'ORBIT_USER',
+            'ORBIT_GROUP',
+            'ORBIT_SOCKET_PATH',
+            'ORBIT_LOG_PATH',
+            'ORBIT_ENV_PATH',
+            'ORBIT_HOME',
         ], [
             $normalizedVersion,
             $this->adapter->getUser(),
@@ -146,7 +146,7 @@ class PhpManager
     public function installPool(string $version): bool
     {
         // Ensure socket directory exists with correct permissions
-        $socketDir = $this->adapter->getHomePath().'/.config/launchpad/php';
+        $socketDir = $this->adapter->getHomePath().'/.config/orbit/php';
         if (! File::isDirectory($socketDir)) {
             File::makeDirectory($socketDir, 0755, true);
         }
@@ -157,7 +157,7 @@ class PhpManager
         $poolConfigPath = $this->getPoolConfigPath($version);
         $systemPoolDir = $this->adapter->getPoolConfigDir($version);
         $normalized = $this->normalizeVersion($version);
-        $symlinkPath = "{$systemPoolDir}/launchpad-{$normalized}.conf";
+        $symlinkPath = "{$systemPoolDir}/orbit-{$normalized}.conf";
 
         // Create symlink to system pool.d directory
         $result = Process::run("sudo ln -sf $poolConfigPath $symlinkPath");
@@ -177,7 +177,7 @@ class PhpManager
     {
         $systemPoolDir = $this->adapter->getPoolConfigDir($version);
         $normalized = $this->normalizeVersion($version);
-        $symlinkPath = "{$systemPoolDir}/launchpad-{$normalized}.conf";
+        $symlinkPath = "{$systemPoolDir}/orbit-{$normalized}.conf";
 
         // Remove symlink from system pool.d directory
         $result = Process::run("sudo rm -f $symlinkPath");
@@ -212,7 +212,7 @@ class PhpManager
         $normalizedVersion = $this->normalizeVersion($version);
         $poolDir = $this->adapter->getPoolConfigDir($version);
 
-        return "{$poolDir}/launchpad-{$normalizedVersion}.conf";
+        return "{$poolDir}/orbit-{$normalizedVersion}.conf";
     }
 
     /**

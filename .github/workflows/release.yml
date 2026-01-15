@@ -45,13 +45,13 @@ jobs:
         run: php box.phar compile
 
       - name: Generate checksum
-        run: sha256sum launchpad.phar > checksums.txt
+        run: sha256sum orbit.phar > checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            launchpad.phar
+            orbit.phar
             checksums.txt
           generate_release_notes: true
         env:

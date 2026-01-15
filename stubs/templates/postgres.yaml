@@ -22,13 +22,13 @@ configSchema:
       properties:
         POSTGRES_USER:
           type: string
-          default: launchpad
+          default: orbit
         POSTGRES_PASSWORD:
           type: string
           default: secret
         POSTGRES_DB:
           type: string
-          default: launchpad
+          default: orbit
 dockerConfig:
   image: "postgres:${version}"
   ports:
@@ -36,13 +36,13 @@ dockerConfig:
   volumes:
     - "${data_path}:/var/lib/postgresql/data"
   environment:
-    POSTGRES_USER: launchpad
+    POSTGRES_USER: orbit
     POSTGRES_PASSWORD: secret
-    POSTGRES_DB: launchpad
+    POSTGRES_DB: orbit
   healthcheck:
     test:
       - CMD-SHELL
-      - "pg_isready -U launchpad"
+      - "pg_isready -U orbit"
     interval: 10s
     timeout: 5s
     retries: 5

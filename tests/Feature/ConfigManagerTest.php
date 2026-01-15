@@ -4,7 +4,7 @@ use App\Services\ConfigManager;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
-    $this->tempDir = sys_get_temp_dir().'/launchpad-config-test-'.uniqid();
+    $this->tempDir = sys_get_temp_dir().'/orbit-config-test-'.uniqid();
     mkdir($this->tempDir, 0755, true);
 
     // Store original HOME and set test HOME (ConfigManager uses getenv)
@@ -19,8 +19,8 @@ afterEach(function () {
     $_SERVER['HOME'] = $this->originalHome;
 
     // Cleanup
-    if (File::isDirectory($this->tempDir.'/.config/launchpad')) {
-        File::deleteDirectory($this->tempDir.'/.config/launchpad');
+    if (File::isDirectory($this->tempDir.'/.config/orbit')) {
+        File::deleteDirectory($this->tempDir.'/.config/orbit');
     }
     if (File::isDirectory($this->tempDir.'/.config')) {
         File::deleteDirectory($this->tempDir.'/.config');
@@ -40,7 +40,7 @@ it('returns default values when config does not exist', function () {
 });
 
 it('loads config from file', function () {
-    $configPath = $this->tempDir.'/.config/launchpad';
+    $configPath = $this->tempDir.'/.config/orbit';
     File::ensureDirectoryExists($configPath);
     File::put($configPath.'/config.json', json_encode([
         'default_php_version' => '8.4',
@@ -56,7 +56,7 @@ it('loads config from file', function () {
 });
 
 it('gets and sets values', function () {
-    $configPath = $this->tempDir.'/.config/launchpad';
+    $configPath = $this->tempDir.'/.config/orbit';
     File::ensureDirectoryExists($configPath);
     File::put($configPath.'/config.json', json_encode([]));
 
@@ -67,7 +67,7 @@ it('gets and sets values', function () {
 });
 
 it('manages site php version overrides', function () {
-    $configPath = $this->tempDir.'/.config/launchpad';
+    $configPath = $this->tempDir.'/.config/orbit';
     File::ensureDirectoryExists($configPath);
     File::put($configPath.'/config.json', json_encode([]));
 
@@ -81,7 +81,7 @@ it('manages site php version overrides', function () {
 });
 
 it('returns site overrides', function () {
-    $configPath = $this->tempDir.'/.config/launchpad';
+    $configPath = $this->tempDir.'/.config/orbit';
     File::ensureDirectoryExists($configPath);
     File::put($configPath.'/config.json', json_encode([
         'sites' => [
@@ -99,7 +99,7 @@ it('returns site overrides', function () {
 });
 
 it('checks enabled services', function () {
-    $configPath = $this->tempDir.'/.config/launchpad';
+    $configPath = $this->tempDir.'/.config/orbit';
     File::ensureDirectoryExists($configPath);
     File::put($configPath.'/config.json', json_encode([
         'services' => [

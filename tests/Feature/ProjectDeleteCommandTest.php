@@ -8,7 +8,7 @@ beforeEach(function () {
     $this->configManager = Mockery::mock(ConfigManager::class)->makePartial();
     $this->configManager->shouldReceive('getPaths')->andReturn(['/tmp/projects']);
     $this->configManager->shouldReceive('getTld')->andReturn('test');
-    $this->configManager->shouldReceive('getConfigPath')->andReturn('/tmp/.config/launchpad');
+    $this->configManager->shouldReceive('getConfigPath')->andReturn('/tmp/.config/orbit');
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
     $this->configManager->shouldReceive('get')->with('sequence.url', 'http://localhost:8000')->andReturn('http://localhost:8000');
     $this->configManager->shouldReceive('get')->with('reverb.url', '')->andReturn('');
@@ -22,13 +22,13 @@ beforeEach(function () {
 
     // Set HOME to temp for DeletionLogger
     $_SERVER['HOME'] = '/tmp';
-    @mkdir('/tmp/.config/launchpad/logs/deletion', 0755, true);
+    @mkdir('/tmp/.config/orbit/logs/deletion', 0755, true);
 });
 
 afterEach(function () {
     // Clean up log files
-    @unlink('/tmp/.config/launchpad/logs/deletion/test-project.log');
-    @unlink('/tmp/.config/launchpad/logs/deletion/nonexistent.log');
+    @unlink('/tmp/.config/orbit/logs/deletion/test-project.log');
+    @unlink('/tmp/.config/orbit/logs/deletion/nonexistent.log');
 });
 
 it('deletes project via MCP when given slug with --force', function () {

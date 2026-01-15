@@ -56,9 +56,9 @@ final class ReverbSetupCommand extends Command
         $this->line('  Copied Docker configuration');
 
         // Generate .env with configuration
-        $appId = $this->option('app-id') ?: $config->get('reverb.app_id', 'launchpad');
-        $appKey = $this->option('app-key') ?: $config->get('reverb.app_key', 'launchpad-key');
-        $appSecret = $this->option('app-secret') ?: $config->get('reverb.app_secret', 'launchpad-secret');
+        $appId = $this->option('app-id') ?: $config->get('reverb.app_id', 'orbit');
+        $appKey = $this->option('app-key') ?: $config->get('reverb.app_key', 'orbit-key');
+        $appSecret = $this->option('app-secret') ?: $config->get('reverb.app_secret', 'orbit-secret');
 
         $envContent = <<<ENV
 REVERB_APP_ID={$appId}
@@ -134,7 +134,7 @@ ENV;
 
         if (! $this->option('enable')) {
             $this->line('');
-            $this->line('Run <comment>launchpad start</comment> to start all services including Reverb.');
+            $this->line('Run <comment>orbit start</comment> to start all services including Reverb.');
         }
 
         return 0;

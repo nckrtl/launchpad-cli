@@ -43,7 +43,7 @@ class ServiceEnableCommand extends Command
 
             $this->newLine();
             $this->info("  Service '{$serviceName}' has been enabled");
-            $this->line("  <fg=gray>Run 'launchpad start {$serviceName}' to start the service</>");
+            $this->line("  <fg=gray>Run 'orbit start {$serviceName}' to start the service</>");
             $this->newLine();
 
             return self::SUCCESS;

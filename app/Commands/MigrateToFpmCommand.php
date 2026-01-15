@@ -32,10 +32,10 @@ class MigrateToFpmCommand extends Command
         $usingFpm = $this->isUsingFpm($phpManager);
 
         // Check if FrankenPHP containers exist (running OR stopped)
-        $usingFrankenPhp = $dockerManager->containerExists('launchpad-php-84')
-            || $dockerManager->containerExists('launchpad-php-83')
-            || $dockerManager->containerExists('launchpad-php-82')
-            || $dockerManager->containerExists('launchpad-caddy');
+        $usingFrankenPhp = $dockerManager->containerExists('orbit-php-84')
+            || $dockerManager->containerExists('orbit-php-83')
+            || $dockerManager->containerExists('orbit-php-82')
+            || $dockerManager->containerExists('orbit-caddy');
 
         if ($usingFpm && ! $usingFrankenPhp) {
             return $this->outputResult(['success' => true, 'message' => 'Already using PHP-FPM']);
@@ -90,7 +90,7 @@ class MigrateToFpmCommand extends Command
         // 8. Remove old containers (unless --keep-containers)
         if (! $this->option('keep-containers')) {
             $this->task('Removing old PHP containers', function () use ($dockerManager) {
-                $containers = ['launchpad-php-82', 'launchpad-php-83', 'launchpad-php-84', 'launchpad-php-85', 'launchpad-caddy', 'launchpad-horizon'];
+                $containers = ['orbit-php-82', 'orbit-php-83', 'orbit-php-84', 'orbit-php-85', 'orbit-caddy', 'orbit-horizon'];
                 foreach ($containers as $container) {
                     if ($dockerManager->containerExists($container)) {
                         if ($dockerManager->isRunning($container)) {

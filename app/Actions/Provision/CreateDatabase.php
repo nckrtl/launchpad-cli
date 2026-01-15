@@ -23,10 +23,10 @@ final readonly class CreateDatabase
 
         // Check if PostgreSQL container is running
         $containerCheck = Process::run(
-            "docker ps --filter name=launchpad-postgres --format '{{.Names}}' 2>&1"
+            "docker ps --filter name=orbit-postgres --format '{{.Names}}' 2>&1"
         );
 
-        if (! str_contains($containerCheck->output(), 'launchpad-postgres')) {
+        if (! str_contains($containerCheck->output(), 'orbit-postgres')) {
             $logger->warn('PostgreSQL container not running, skipping database creation');
 
             return StepResult::success();
@@ -36,7 +36,7 @@ final readonly class CreateDatabase
 
         // Check if database already exists
         $checkResult = Process::run(
-            "docker exec launchpad-postgres psql -U launchpad -tAc \"SELECT 1 FROM pg_database WHERE datname='{$slug}'\" 2>&1"
+            "docker exec orbit-postgres psql -U orbit -tAc \"SELECT 1 FROM pg_database WHERE datname='{$slug}'\" 2>&1"
         );
 
         if (str_contains($checkResult->output(), '1')) {
@@ -47,7 +47,7 @@ final readonly class CreateDatabase
 
         // Create database
         $result = Process::run(
-            "docker exec launchpad-postgres psql -U launchpad -c \"CREATE DATABASE \\\"{$slug}\\\";\" 2>&1"
+            "docker exec orbit-postgres psql -U orbit -c \"CREATE DATABASE \\\"{$slug}\\\";\" 2>&1"
         );
 
         if ($result->successful()) {

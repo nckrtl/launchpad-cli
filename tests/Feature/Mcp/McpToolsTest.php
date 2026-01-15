@@ -44,7 +44,7 @@ describe('StatusTool', function () {
         $this->siteScanner->shouldReceive('scanSites')->andReturn([
             ['name' => 'mysite', 'domain' => 'mysite.test'],
         ]);
-        $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/launchpad');
+        $this->configManager->shouldReceive('getConfigPath')->andReturn('/home/user/.config/orbit');
         $this->configManager->shouldReceive('getTld')->andReturn('test');
         $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.4');
         $this->configManager->shouldReceive('isServiceEnabled')->andReturn(false);

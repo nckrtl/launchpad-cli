@@ -57,9 +57,9 @@ class WebInstallCommand extends Command
             return $result->successful();
         });
 
-        // Regenerate Caddyfile to include launchpad.{tld}
+        // Regenerate Caddyfile to include orbit.{tld}
         $this->task('Updating Caddy configuration', function () {
-            $result = Process::run('launchpad caddy:generate 2>/dev/null');
+            $result = Process::run('orbit caddy:generate 2>/dev/null');
 
             return $result->successful();
         });
@@ -68,10 +68,10 @@ class WebInstallCommand extends Command
         $this->info('Web app installed successfully!');
         $this->info('');
         $this->info('To complete setup:');
-        $this->info('  1. Restart launchpad: launchpad restart');
+        $this->info('  1. Restart Orbit: orbit restart');
         $this->info('  2. Horizon will start with other services');
         $tld = $configManager->getTld();
-        $this->info("  3. Access at: https://launchpad.{$tld}");
+        $this->info("  3. Access at: https://orbit.{$tld}");
 
         return self::SUCCESS;
     }
@@ -152,11 +152,11 @@ class WebInstallCommand extends Command
         $appKey = $existingEnv['APP_KEY'] ?? 'base64:'.base64_encode(random_bytes(32));
 
         $env = <<<ENV
-APP_NAME=Launchpad
+APP_NAME=Orbit
 APP_ENV=production
 APP_KEY={$appKey}
 APP_DEBUG=false
-APP_URL=https://launchpad.{$tld}
+APP_URL=https://orbit.{$tld}
 
 LOG_CHANNEL=single
 LOG_LEVEL=error
@@ -166,7 +166,7 @@ DB_CONNECTION=null
 
 # Redis for everything
 REDIS_CLIENT=phpredis
-REDIS_HOST=launchpad-redis
+REDIS_HOST=orbit-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 

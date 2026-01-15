@@ -28,7 +28,7 @@ if (isset($options['help'])) {
 $tld = $options['tld'] ?? getenv('TLD') ?: 'ccc';
 $timeout = (int) ($options['timeout'] ?? 120);
 $slug = 'e2e-test-'.time();
-$apiBase = "https://launchpad.{$tld}/api";
+$apiBase = "https://orbit.{$tld}/api";
 $home = getenv('HOME') ?: '/home/launchpad';
 
 echo "=== E2E Broadcast Test ===\n";
@@ -75,7 +75,7 @@ function httpRequest(string $url, string $method = 'GET', ?array $data = null): 
 
 function checkProvisionLog(string $slug, string $home): array
 {
-    $logFile = "{$home}/.config/launchpad/logs/provision/{$slug}.log";
+    $logFile = "{$home}/.config/orbit/logs/provision/{$slug}.log";
     if (! file_exists($logFile)) {
         return ['exists' => false, 'content' => ''];
     }
@@ -85,7 +85,7 @@ function checkProvisionLog(string $slug, string $home): array
 
 function checkDeletionLog(string $slug, string $home): array
 {
-    $logFile = "{$home}/.config/launchpad/logs/deletion/{$slug}.log";
+    $logFile = "{$home}/.config/orbit/logs/deletion/{$slug}.log";
     if (! file_exists($logFile)) {
         return ['exists' => false, 'content' => ''];
     }

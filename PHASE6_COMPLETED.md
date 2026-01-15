@@ -65,11 +65,11 @@ $ ./vendor/bin/pest tests/Unit/PhpManagerTest.php tests/Unit/PlatformAdapterTest
    - Shows architecture detection command
 
 2. **Updated Commands Table**
-   - Added `launchpad migrate:to-fpm`
-   - Added `launchpad horizon:status`
-   - Added `launchpad horizon:start`
-   - Added `launchpad horizon:stop`
-   - Added `launchpad horizon:restart`
+   - Added `orbit migrate:to-fpm`
+   - Added `orbit horizon:status`
+   - Added `orbit horizon:start`
+   - Added `orbit horizon:stop`
+   - Added `orbit horizon:restart`
 
 ## Command Verification
 
@@ -77,16 +77,16 @@ All new commands verified working:
 
 ```bash
 # Architecture detection
-$ php launchpad status --json | jq -r ".data.architecture"
+$ php orbit status --json | jq -r ".data.architecture"
 frankenphp
 
 # Migration command
-$ php launchpad migrate:to-fpm --help
+$ php orbit migrate:to-fpm --help
 Description:
   Migrate from FrankenPHP containers to PHP-FPM on host
 
 # Horizon status
-$ php launchpad horizon:status --json
+$ php orbit horizon:status --json
 {
     "success": true,
     "data": {

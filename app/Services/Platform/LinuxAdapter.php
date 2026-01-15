@@ -111,15 +111,15 @@ class LinuxAdapter implements PlatformAdapter
 
     /**
      * Get the socket path for a PHP version.
-     * Returns custom launchpad socket path using format without dots (php84.sock not php8.4.sock).
+     * Returns custom orbit socket path using format without dots (php84.sock not php8.4.sock).
      */
     public function getSocketPath(string $version): string
     {
         $normalizedVersion = $this->normalizePhpVersion($version);
         $normalized = str_replace('.', '', $normalizedVersion); // Remove dot: 8.4 -> 84
 
-        // Use custom launchpad socket path for consistency
-        return $this->getHomePath()."/.config/launchpad/php/php{$normalized}.sock";
+        // Use custom orbit socket path for consistency
+        return $this->getHomePath()."/.config/orbit/php/php{$normalized}.sock";
     }
 
     /**

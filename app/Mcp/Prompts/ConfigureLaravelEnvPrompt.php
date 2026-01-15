@@ -10,7 +10,7 @@ use Laravel\Mcp\Server\Prompts\Argument;
 
 class ConfigureLaravelEnvPrompt extends Prompt
 {
-    protected string $description = 'Guide for configuring a Laravel project .env for Launchpad infrastructure';
+    protected string $description = 'Guide for configuring a Laravel project .env for Orbit infrastructure';
 
     /**
      * @return array<int, Argument>
@@ -36,24 +36,24 @@ class ConfigureLaravelEnvPrompt extends Prompt
 
         return [
             Response::text(
-                "Please configure the Laravel .env file for the project '{$slug}' to work with Launchpad infrastructure."
+                "Please configure the Laravel .env file for the project '{$slug}' to work with Orbit infrastructure."
             ),
             Response::text(<<<ENV
-Here's the complete .env configuration for your Laravel project to use Launchpad's infrastructure:
+Here's the complete .env configuration for your Laravel project to use Orbit's infrastructure:
 
 ## Database (PostgreSQL)
 ```env
 DB_CONNECTION=pgsql
-DB_HOST=launchpad-postgres
+DB_HOST=orbit-postgres
 DB_PORT=5432
 DB_DATABASE={$slug}
-DB_USERNAME=launchpad
-DB_PASSWORD=launchpad
+DB_USERNAME=orbit
+DB_PASSWORD=orbit
 ```
 
 ## Redis (Cache, Session, Queue)
 ```env
-REDIS_HOST=launchpad-redis
+REDIS_HOST=orbit-redis
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
@@ -69,7 +69,7 @@ QUEUE_CONNECTION=redis
 ## Mail (Mailpit for testing)
 ```env
 MAIL_MAILER=smtp
-MAIL_HOST=launchpad-mailpit
+MAIL_HOST=orbit-mailpit
 MAIL_PORT=1025
 MAIL_USERNAME=null
 MAIL_PASSWORD=null
@@ -82,7 +82,7 @@ MAIL_FROM_NAME="{$slug}"
 
 1. **Database Creation**: The PostgreSQL database `{$slug}` will be created automatically when you run `php artisan migrate`. No need to create it manually.
 
-2. **Redis**: All three services (cache, session, queue) use the shared Redis instance at `launchpad-redis:6379`. This is already running as part of your Launchpad infrastructure.
+2. **Redis**: All three services (cache, session, queue) use the shared Redis instance at `orbit-redis:6379`. This is already running as part of your Orbit infrastructure.
 
 3. **Mailpit**: All emails sent from your application will be caught by Mailpit. Access the web UI at `https://mailpit.test` to view sent emails.
 
@@ -95,7 +95,7 @@ MAIL_FROM_NAME="{$slug}"
    >>> Redis::connection()->ping(); // Test Redis
    ```
 
-All services (PostgreSQL, Redis, Mailpit) are accessible from your Laravel application because they're on the same Docker network managed by Launchpad.
+All services (PostgreSQL, Redis, Mailpit) are accessible from your Laravel application because they're on the same Docker network managed by Orbit.
 ENV
             )->asAssistant(),
         ];

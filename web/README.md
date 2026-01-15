@@ -1,6 +1,6 @@
-# Launchpad Web App
+# Orbit Web App
 
-A stateless Laravel application that provides API endpoints for the Launchpad ecosystem. This web app is bundled with the Launchpad CLI and deployed to `~/.config/launchpad/web/`.
+A stateless Laravel application that provides API endpoints for the Orbit ecosystem. This web app is bundled with the Orbit CLI and deployed to `~/.config/orbit/web/`.
 
 ## Architecture
 
@@ -16,10 +16,10 @@ The web app is **stateless by design**:
 │           │                                                     │
 │           ▼                                                     │
 │  ┌─────────────────────┐     ┌─────────────────────┐            │
-│  │ Launchpad Web App   │     │  launchpad-redis    │            │
+│  │ Orbit Web App   │     │  orbit-redis    │            │
 │  │ (FrankenPHP/Docker) │────▶│  (Docker container) │            │
 │  │ REDIS_HOST=         │     │                     │            │
-│  │ launchpad-redis     │     └──────────┬──────────┘            │
+│  │ orbit-redis     │     └──────────┬──────────┘            │
 │  └─────────────────────┘                │                       │
 │                                         │ 127.0.0.1:6379        │
 │                                         ▼                       │
@@ -37,13 +37,13 @@ The web app is **stateless by design**:
 |----------|--------|-------------|
 | `/api/projects` | POST | Create new project (dispatches CreateProjectJob) |
 | `/api/projects` | GET | List all projects |
-| `/api/status` | GET | Get launchpad status |
+| `/api/status` | GET | Get orbit status |
 | `/horizon` | GET | Horizon dashboard (web UI) |
 
 ### Create Project
 
 ```bash
-curl -sk https://launchpad.ccc/api/projects \
+curl -sk https://orbit.ccc/api/projects \
   -H "Content-Type: application/json" \
   -X POST \
   -d '{"name":"my-project","template":"user/repo","db_driver":"pgsql","visibility":"private"}'
@@ -61,11 +61,11 @@ Response:
 
 ## Horizon Queue Worker
 
-Horizon runs as a Docker container (`launchpad-horizon`) managed by the CLI.
+Horizon runs as a Docker container (`orbit-horizon`) managed by the CLI.
 
 ### Docker Configuration
 
-Located at `~/.config/launchpad/horizon/docker-compose.yml`:
+Located at `~/.config/orbit/horizon/docker-compose.yml`:
 - Uses the same PHP image as web containers
 - Mounts the web app at `/app`
 - Connects to Redis and Reverb via Docker network
@@ -75,19 +75,19 @@ Located at `~/.config/launchpad/horizon/docker-compose.yml`:
 
 ```bash
 # Check status
-launchpad horizon:status
-docker ps | grep launchpad-horizon
+orbit horizon:status
+docker ps | grep orbit-horizon
 
 # Start/Stop/Restart
-launchpad horizon:start
-launchpad horizon:stop
-docker restart launchpad-horizon
+orbit horizon:start
+orbit horizon:stop
+docker restart orbit-horizon
 
 # View logs
-docker logs launchpad-horizon --tail 100 -f
+docker logs orbit-horizon --tail 100 -f
 
 # Access dashboard
-open https://launchpad.{tld}/horizon
+open https://orbit.{tld}/horizon
 ```
 
 ## Configuration
@@ -101,8 +101,8 @@ DB_CONNECTION=null           # No database
 QUEUE_CONNECTION=redis       # Queues via Redis
 CACHE_STORE=redis           # Cache via Redis
 SESSION_DRIVER=redis        # Sessions via Redis
-REDIS_HOST=launchpad-redis   # Docker network name
-REVERB_HOST=launchpad-reverb # Reverb container
+REDIS_HOST=orbit-redis   # Docker network name
+REVERB_HOST=orbit-reverb # Reverb container
 REVERB_PORT=6001            # Reverb port
 ```
 
@@ -112,8 +112,8 @@ Both the web app and Horizon run in Docker, using Docker network hostnames:
 
 | Container | REDIS_HOST | Notes |
 |-----------|------------|-------|
-| launchpad-php-* | `launchpad-redis` | PHP containers for web requests |
-| launchpad-horizon | `launchpad-redis` | Queue worker container |
+| orbit-php-* | `orbit-redis` | PHP containers for web requests |
+| orbit-horizon | `orbit-redis` | Queue worker container |
 
 ## Troubleshooting
 
@@ -121,37 +121,37 @@ Both the web app and Horizon run in Docker, using Docker network hostnames:
 
 ```bash
 # Check Horizon container is running
-docker ps | grep launchpad-horizon
+docker ps | grep orbit-horizon
 
 # Check container logs for errors
-docker logs launchpad-horizon --tail 50
+docker logs orbit-horizon --tail 50
 
 # Check Redis connectivity from Horizon container
-docker exec launchpad-horizon redis-cli -h launchpad-redis ping
+docker exec orbit-horizon redis-cli -h orbit-redis ping
 
 # Check pending jobs
-docker exec launchpad-redis redis-cli LLEN launchpad_horizon:default
+docker exec orbit-redis redis-cli LLEN orbit_horizon:default
 ```
 
 ### Horizon Not Starting
 
 ```bash
 # View container logs
-docker logs launchpad-horizon
+docker logs orbit-horizon
 
 # Restart the container
-docker restart launchpad-horizon
+docker restart orbit-horizon
 
 # Check health status
-docker inspect launchpad-horizon --format "{{.State.Health.Status}}"
+docker inspect orbit-horizon --format "{{.State.Health.Status}}"
 ```
 
 ### Config Changes Not Taking Effect
 
 After changing `.env`, clear config cache:
 ```bash
-docker exec launchpad-horizon php artisan config:clear
-docker restart launchpad-horizon
+docker exec orbit-horizon php artisan config:clear
+docker restart orbit-horizon
 ```
 
 ### Job Fails with Exit Code 1
@@ -161,8 +161,8 @@ docker restart launchpad-horizon
 
 ```bash
 # Check Laravel logs
-tail -f ~/.config/launchpad/web/storage/logs/laravel.log
+tail -f ~/.config/orbit/web/storage/logs/laravel.log
 
 # Run provision command directly
-launchpad provision my-project --template=user/repo --db-driver=pgsql --visibility=private
+orbit provision my-project --template=user/repo --db-driver=pgsql --visibility=private
 ```

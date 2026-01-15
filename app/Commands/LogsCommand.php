@@ -8,7 +8,7 @@ use LaravelZero\Framework\Commands\Command;
 class LogsCommand extends Command
 {
     protected $signature = 'logs
-        {container : The container name to show logs for (e.g., launchpad-php-83, launchpad-caddy)}
+        {container : The container name to show logs for (e.g., orbit-php-83, orbit-caddy)}
         {--no-follow : Do not follow log output}';
 
     protected $description = 'Tail container logs';

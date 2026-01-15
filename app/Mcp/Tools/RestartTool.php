@@ -13,9 +13,9 @@ use Laravel\Mcp\Server\Tool;
 
 final class RestartTool extends Tool
 {
-    protected string $name = 'launchpad_restart';
+    protected string $name = 'orbit_restart';
 
-    protected string $description = 'Restart all Launchpad Docker services (stops all services, then starts them again)';
+    protected string $description = 'Restart all Orbit Docker services (stops all services, then starts them again)';
 
     public function __construct(
         protected DockerManager $dockerManager,
@@ -34,7 +34,7 @@ final class RestartTool extends Tool
 
             return Response::structured([
                 'success' => true,
-                'message' => 'All Launchpad services restarted successfully',
+                'message' => 'All Orbit services restarted successfully',
             ]);
         } catch (\Exception $e) {
             return Response::structured([

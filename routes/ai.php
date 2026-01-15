@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Mcp\Servers\LaunchpadServer;
+use App\Mcp\Servers\OrbitServer;
 use Laravel\Mcp\Facades\Mcp;
 
 /*
@@ -10,12 +10,12 @@ use Laravel\Mcp\Facades\Mcp;
 | MCP Routes
 |--------------------------------------------------------------------------
 |
-| Register MCP servers for AI tool integration. The 'launchpad' server
+| Register MCP servers for AI tool integration. The 'orbit' server
 | provides access to Docker infrastructure, site management, and
 | environment configuration.
 |
-| Usage: launchpad mcp:start launchpad
+| Usage: orbit mcp:start orbit
 |
 */
 
-Mcp::local('launchpad', LaunchpadServer::class);
+Mcp::local('orbit', OrbitServer::class);

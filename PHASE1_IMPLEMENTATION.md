@@ -17,13 +17,13 @@ Phase 1 of the FrankenPHP to PHP-FPM migration has been successfully implemented
    - Implements PlatformAdapter for Ubuntu/Debian Linux
    - Uses apt-get with Ondřej PPA for PHP installation
    - Uses systemctl for service management
-   - Socket paths: ~/.config/launchpad/php/php{version}.sock
+   - Socket paths: ~/.config/orbit/php/php{version}.sock
 
 3. **app/Services/Platform/MacAdapter.php**
    - Implements PlatformAdapter for macOS
    - Uses Homebrew with shivammathur/php tap
    - Uses brew services for service management
-   - Socket paths: ~/.config/launchpad/php/php{version}.sock
+   - Socket paths: ~/.config/orbit/php/php{version}.sock
 
 ### Service Managers
 
@@ -41,8 +41,8 @@ Phase 1 of the FrankenPHP to PHP-FPM migration has been successfully implemented
 
 6. **app/Services/HorizonManager.php**
    - Manages Horizon as a system service
-   - Linux: systemd service at /etc/systemd/system/launchpad-horizon.service
-   - macOS: launchd plist at ~/Library/LaunchAgents/com.launchpad.horizon.plist
+   - Linux: systemd service at /etc/systemd/system/orbit-horizon.service
+   - macOS: launchd plist at ~/Library/LaunchAgents/com.orbit.horizon.plist
    - Methods: install, start, stop, restart, isRunning, getLogs
 
 ### Stub Templates
@@ -51,7 +51,7 @@ All stub templates already existed in stubs/ directory:
 
 7. **stubs/php-fpm-pool.conf.stub**
    - FPM pool configuration template
-   - Placeholders: LAUNCHPAD_USER, LAUNCHPAD_SOCKET_PATH, etc.
+   - Placeholders: ORBIT_USER, ORBIT_SOCKET_PATH, etc.
    - Inspired by Laravel Valet
 
 8. **stubs/horizon-systemd.service.stub**
@@ -94,8 +94,8 @@ Following Laravel Valet's approach, configuration files are generated from stub 
 ```php
 $stub = File::get($this->stubPath('php-fpm-pool.conf.stub'));
 $config = str_replace([
-    'LAUNCHPAD_PHP_VERSION',
-    'LAUNCHPAD_USER',
+    'ORBIT_PHP_VERSION',
+    'ORBIT_USER',
     // ... more placeholders
 ], [
     $normalizedVersion,
@@ -138,19 +138,19 @@ php -l app/Services/HorizonManager.php            # No syntax errors
 ### Socket Paths
 
 Custom socket paths are used on both platforms for consistency:
-- Linux: ~/.config/launchpad/php/php84.sock (not /run/php/)
-- macOS: ~/.config/launchpad/php/php84.sock
+- Linux: ~/.config/orbit/php/php84.sock (not /run/php/)
+- macOS: ~/.config/orbit/php/php84.sock
 
 This ensures consistent Caddy configuration across platforms.
 
 ### Service Management
 
 **Linux (systemd):**
-- Services: php8.4-fpm.service, caddy.service, launchpad-horizon.service
+- Services: php8.4-fpm.service, caddy.service, orbit-horizon.service
 - Commands: systemctl start/stop/restart/reload
 
 **macOS (launchd/brew):**
-- Services: php@8.4, caddy, com.launchpad.horizon
+- Services: php@8.4, caddy, com.orbit.horizon
 - Commands: brew services start/stop/restart, launchctl load/unload
 
 ### Environment Variables
@@ -160,24 +160,24 @@ FPM pools and Horizon services get critical PATH:
 ~/.local/bin:~/.bun/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
-This ensures PHP processes can access CLI tools like `launchpad`, `bun`, `composer`, etc.
+This ensures PHP processes can access CLI tools like `orbit`, `bun`, `composer`, etc.
 
 ## File Locations
 
 ### Source Code (CLI)
-- ~/projects/launchpad-cli/app/Services/Platform/
-- ~/projects/launchpad-cli/app/Services/PhpManager.php
-- ~/projects/launchpad-cli/app/Services/CaddyManager.php
-- ~/projects/launchpad-cli/app/Services/HorizonManager.php
-- ~/projects/launchpad-cli/stubs/
+- ~/projects/orbit-cli/app/Services/Platform/
+- ~/projects/orbit-cli/app/Services/PhpManager.php
+- ~/projects/orbit-cli/app/Services/CaddyManager.php
+- ~/projects/orbit-cli/app/Services/HorizonManager.php
+- ~/projects/orbit-cli/stubs/
 
 ### Runtime Configs (Generated)
-- ~/.config/launchpad/php/php84-fpm.conf (FPM pool)
-- ~/.config/launchpad/caddy/Caddyfile (Caddy config)
-- /etc/systemd/system/launchpad-horizon.service (Linux)
-- ~/Library/LaunchAgents/com.launchpad.horizon.plist (macOS)
+- ~/.config/orbit/php/php84-fpm.conf (FPM pool)
+- ~/.config/orbit/caddy/Caddyfile (Caddy config)
+- /etc/systemd/system/orbit-horizon.service (Linux)
+- ~/Library/LaunchAgents/com.orbit.horizon.plist (macOS)
 
 ## References
 
-- Migration Plan: /Users/nckrtl/projects-new/launchpad-desktop/docs/MIGRATION-PHP-FPM.md
+- Migration Plan: /Users/nckrtl/projects-new/orbit-desktop/docs/MIGRATION-PHP-FPM.md
 - Laravel Valet: https://github.com/laravel/valet/blob/master/cli/Valet/PhpFpm.php

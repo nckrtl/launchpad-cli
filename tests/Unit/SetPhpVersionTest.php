@@ -10,7 +10,7 @@ beforeEach(function () {
     $this->logger = new ProvisionLogger(slug: 'test-php-version');
 
     // Set up test database
-    $this->dbPath = sys_get_temp_dir().'/launchpad-tests/test-php.sqlite';
+    $this->dbPath = sys_get_temp_dir().'/orbit-tests/test-php.sqlite';
     if (file_exists($this->dbPath)) {
         unlink($this->dbPath);
     }

@@ -13,9 +13,9 @@ use Laravel\Mcp\Server\Tool;
 
 final class StopTool extends Tool
 {
-    protected string $name = 'launchpad_stop';
+    protected string $name = 'orbit_stop';
 
-    protected string $description = 'Stop all Launchpad Docker services (DNS, PHP, Caddy, PostgreSQL, Redis, Mailpit, and enabled optional services)';
+    protected string $description = 'Stop all Orbit Docker services (DNS, PHP, Caddy, PostgreSQL, Redis, Mailpit, and enabled optional services)';
 
     public function __construct(
         protected DockerManager $dockerManager,
@@ -33,7 +33,7 @@ final class StopTool extends Tool
 
             return Response::structured([
                 'success' => true,
-                'message' => 'All Launchpad services stopped successfully',
+                'message' => 'All Orbit services stopped successfully',
             ]);
         } catch (\Exception $e) {
             return Response::structured([

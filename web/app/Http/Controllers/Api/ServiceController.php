@@ -17,8 +17,8 @@ class ServiceController extends Controller
     public function status()
     {
         // Synchronous call - returns current status immediately
-        $launchpadBinary = env('LAUNCHPAD_BINARY', '/usr/local/bin/launchpad');
-        $result = Process::timeout(30)->run("{$launchpadBinary} status --json");
+        $orbitBinary = env('ORBIT_BINARY', '/usr/local/bin/orbit');
+        $result = Process::timeout(30)->run("{$orbitBinary} status --json");
 
         if ($result->successful()) {
             $data = json_decode($result->output(), true);

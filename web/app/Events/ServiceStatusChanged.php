@@ -26,7 +26,7 @@ class ServiceStatusChanged implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('launchpad'),
+            new Channel('orbit'),
         ];
     }
 

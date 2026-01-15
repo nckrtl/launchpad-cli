@@ -48,10 +48,10 @@ class CaddyfileGenerator
 
 ';
 
-        // Add launchpad management UI site
+        // Add orbit management UI site
         $webAppPath = $this->configManager->getWebAppPath();
         if (is_dir($webAppPath)) {
-            $caddyfile .= "launchpad.{$tld} {
+            $caddyfile .= "orbit.{$tld} {
     tls internal
     root * {$webAppPath}/public
     encode gzip

@@ -394,7 +394,7 @@ class MacSetup
         if (! File::exists($globalCaddyfile) || ! str_contains(File::get($globalCaddyfile), $caddyfilePath)) {
             $importLine = "import {$caddyfilePath}";
             File::put($globalCaddyfile, $importLine.PHP_EOL);
-            $this->progressInfo('Configured Caddy to import Launchpad config');
+            $this->progressInfo('Configured Caddy to import Orbit config');
         }
 
         return true;

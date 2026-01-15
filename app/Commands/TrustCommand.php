@@ -17,8 +17,8 @@ class TrustCommand extends Command
         $this->info('Installing Caddy root CA certificate...');
 
         // Check if Caddy container is running (uses batched cache if available)
-        if (! $dockerManager->isRunning('launchpad-caddy')) {
-            $this->error('Caddy container is not running. Run: launchpad start');
+        if (! $dockerManager->isRunning('orbit-caddy')) {
+            $this->error('Caddy container is not running. Run: orbit start');
 
             return self::FAILURE;
         }
@@ -27,7 +27,7 @@ class TrustCommand extends Command
         $tempCert = '/tmp/caddy-root-ca.crt';
 
         $this->task('Extracting root CA from Caddy', function () use ($tempCert) {
-            $result = Process::run("docker exec launchpad-caddy cat /data/caddy/pki/authorities/local/root.crt > {$tempCert}");
+            $result = Process::run("docker exec orbit-caddy cat /data/caddy/pki/authorities/local/root.crt > {$tempCert}");
 
             return file_exists($tempCert) && filesize($tempCert) > 0;
         });

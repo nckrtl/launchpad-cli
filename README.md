@@ -1,6 +1,6 @@
-# Launchpad CLI
+# Orbit CLI
 
-A local PHP development environment powered by Docker. Launchpad provides a simple, fast way to run PHP applications locally with automatic HTTPS, multiple PHP versions, and essential services.
+A local PHP development environment powered by Docker. Orbit provides a simple, fast way to run PHP applications locally with automatic HTTPS, multiple PHP versions, and essential services.
 
 ## Features
 
@@ -15,27 +15,27 @@ A local PHP development environment powered by Docker. Launchpad provides a simp
 Download the latest release:
 
 ```bash
-curl -L -o ~/.local/bin/launchpad https://github.com/nckrtl/launchpad-cli/releases/latest/download/launchpad.phar
-chmod +x ~/.local/bin/launchpad
+curl -L -o ~/.local/bin/orbit https://github.com/nckrtl/orbit-cli/releases/latest/download/orbit.phar
+chmod +x ~/.local/bin/orbit
 ```
 
 Make sure `~/.local/bin` is in your PATH.
 
 ## Quick Start
 
-1. Initialize Launchpad (first time only):
+1. Initialize Orbit (first time only):
    ```bash
-   launchpad init
+   orbit init
    ```
 
 2. Start the services:
    ```bash
-   launchpad start
+   orbit start
    ```
 
 3. Trust the local CA certificate (for HTTPS):
    ```bash
-   launchpad trust
+   orbit trust
    ```
 
 4. Link your project (creates a symlink in ~/projects):
@@ -49,46 +49,46 @@ Make sure `~/.local/bin` is in your PATH.
 
 | Command | Description |
 |---------|-------------|
-| `launchpad init` | First-time setup: creates config, pulls images, sets up DNS |
-| `launchpad start` | Start all Launchpad services |
-| `launchpad stop` | Stop all Launchpad services |
-| `launchpad restart` | Restart all Launchpad services |
-| `launchpad status` | Show status and running services |
-| `launchpad sites` | List all sites with their PHP versions |
-| `launchpad php <site> <version>` | Set PHP version for a site (8.3, 8.4, 8.5) |
-| `launchpad logs` | Tail container logs |
-| `launchpad trust` | Install Caddy root CA for local HTTPS |
-| `launchpad upgrade` | Upgrade to the latest version |
-| `launchpad rebuild` | Rebuild PHP images with Redis and other extensions |
-| `launchpad upgrade --check` | Check for available updates |
-| `launchpad worktrees` | List all git worktrees |
-| `launchpad worktree:refresh` | Auto-detect and link new worktrees |
-| `launchpad worktree:unlink <site> <wt>` | Remove worktree routing |
-| `launchpad project:create <name>` | Create project with async provisioning |
-| `launchpad project:list` | List all projects in scan paths |
-| `launchpad project:scan` | Scan for git repositories |
-| `launchpad project:update [path]` | Update project (git pull + deps) |
-| `launchpad project:delete <slug>` | Delete project with cascade |
-| `launchpad provision <slug>` | Background provisioning (internal) |
-| `launchpad provision:status <slug>` | Check provisioning status |
-| `launchpad reverb:setup` | Setup Reverb WebSocket service |
+| `orbit init` | First-time setup: creates config, pulls images, sets up DNS |
+| `orbit start` | Start all Orbit services |
+| `orbit stop` | Stop all Orbit services |
+| `orbit restart` | Restart all Orbit services |
+| `orbit status` | Show status and running services |
+| `orbit sites` | List all sites with their PHP versions |
+| `orbit php <site> <version>` | Set PHP version for a site (8.3, 8.4, 8.5) |
+| `orbit logs` | Tail container logs |
+| `orbit trust` | Install Caddy root CA for local HTTPS |
+| `orbit upgrade` | Upgrade to the latest version |
+| `orbit rebuild` | Rebuild PHP images with Redis and other extensions |
+| `orbit upgrade --check` | Check for available updates |
+| `orbit worktrees` | List all git worktrees |
+| `orbit worktree:refresh` | Auto-detect and link new worktrees |
+| `orbit worktree:unlink <site> <wt>` | Remove worktree routing |
+| `orbit project:create <name>` | Create project with async provisioning |
+| `orbit project:list` | List all projects in scan paths |
+| `orbit project:scan` | Scan for git repositories |
+| `orbit project:update [path]` | Update project (git pull + deps) |
+| `orbit project:delete <slug>` | Delete project with cascade |
+| `orbit provision <slug>` | Background provisioning (internal) |
+| `orbit provision:status <slug>` | Check provisioning status |
+| `orbit reverb:setup` | Setup Reverb WebSocket service |
 
 ## Services & Ports
 
 ## Service Management
 
-Launchpad provides a declarative service management system. Services are defined as templates and can be enabled, configured, or disabled.
+Orbit provides a declarative service management system. Services are defined as templates and can be enabled, configured, or disabled.
 
 ### Service Commands
 
 | Command | Description |
 |---------|-------------|
-| `launchpad service:list` | List configured services with status |
-| `launchpad service:list --available` | Show available service templates |
-| `launchpad service:enable <name>` | Enable a service with defaults |
-| `launchpad service:disable <name>` | Disable a service |
-| `launchpad service:configure <name> --set key=value` | Update service configuration |
-| `launchpad service:info <name>` | Show detailed service information |
+| `orbit service:list` | List configured services with status |
+| `orbit service:list --available` | Show available service templates |
+| `orbit service:enable <name>` | Enable a service with defaults |
+| `orbit service:disable <name>` | Disable a service |
+| `orbit service:configure <name> --set key=value` | Update service configuration |
+| `orbit service:info <name>` | Show detailed service information |
 
 ### Available Services
 
@@ -106,24 +106,24 @@ Launchpad provides a declarative service management system. Services are defined
 
 ```bash
 # List current services
-launchpad service:list
+orbit service:list
 
 # Enable MySQL database
-launchpad service:enable mysql
+orbit service:enable mysql
 
 # Change PostgreSQL to version 16
-launchpad service:configure postgres --set version=16
+orbit service:configure postgres --set version=16
 
 # Change Redis max memory
-launchpad service:configure redis --set maxmemory=512mb
+orbit service:configure redis --set maxmemory=512mb
 
 # Show service details
-launchpad service:info postgres
+orbit service:info postgres
 ```
 
 ### Configuration
 
-Services are configured in `~/.config/launchpad/services.yaml`. Each service can specify:
+Services are configured in `~/.config/orbit/services.yaml`. Each service can specify:
 
 - `enabled` - Whether the service is active
 - `version` - Service version (from available versions)
@@ -146,7 +146,7 @@ Changes to services.yaml automatically regenerate `docker-compose.yaml`.
 
 ## Configuration
 
-Launchpad stores its configuration at `~/.config/launchpad/config.json`. You can customize:
+Orbit stores its configuration at `~/.config/orbit/config.json`. You can customize:
 
 ### Paths
 
@@ -193,7 +193,7 @@ Change the top-level domain (default: `test`):
 
 ## Git Worktree Support
 
-Launchpad automatically detects git worktrees and creates subdomains:
+Orbit automatically detects git worktrees and creates subdomains:
 
 ```bash
 # Create a worktree for your project
@@ -201,7 +201,7 @@ cd ~/projects/myapp
 git worktree add ../myapp-feature-auth feature/auth
 
 # Refresh to pick up the new worktree
-launchpad worktree:refresh
+orbit worktree:refresh
 
 # Access via subdomain
 # https://feature-auth.myapp.test
@@ -226,15 +226,15 @@ Worktrees are served from `<worktree-name>.<site>.test`.
 |------------|---------|
 | dig | DNS debugging (built-in on macOS, `apt install dnsutils` on Linux) |
 
-**Note:** The `launchpad init` command will check for and automatically install missing prerequisites.
+**Note:** The `orbit init` command will check for and automatically install missing prerequisites.
 
 ## Development
 
 ### Setup
 
 ```bash
-git clone https://github.com/nckrtl/launchpad-cli.git
-cd launchpad-cli
+git clone https://github.com/nckrtl/orbit-cli.git
+cd orbit-cli
 composer install
 
 # Enable git hooks

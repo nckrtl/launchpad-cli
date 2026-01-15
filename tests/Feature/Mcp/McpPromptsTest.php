@@ -50,7 +50,7 @@ describe('ConfigureLaravelEnvPrompt', function () {
         }
 
         expect($content)->toContain('DB_CONNECTION=pgsql');
-        expect($content)->toContain('launchpad-postgres');
+        expect($content)->toContain('orbit-postgres');
     });
 
     it('includes redis configuration guidance', function () {
@@ -62,7 +62,7 @@ describe('ConfigureLaravelEnvPrompt', function () {
             $content .= (string) $message->content();
         }
 
-        expect($content)->toContain('REDIS_HOST=launchpad-redis');
+        expect($content)->toContain('REDIS_HOST=orbit-redis');
     });
 
     it('includes mail configuration guidance', function () {
@@ -74,7 +74,7 @@ describe('ConfigureLaravelEnvPrompt', function () {
             $content .= (string) $message->content();
         }
 
-        expect($content)->toContain('MAIL_HOST=launchpad-mailpit');
+        expect($content)->toContain('MAIL_HOST=orbit-mailpit');
     });
 });
 

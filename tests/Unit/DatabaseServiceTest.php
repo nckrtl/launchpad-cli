@@ -3,7 +3,7 @@
 use App\Services\DatabaseService;
 
 beforeEach(function () {
-    $this->testDir = sys_get_temp_dir().'/launchpad-db-tests-'.uniqid();
+    $this->testDir = sys_get_temp_dir().'/orbit-db-tests-'.uniqid();
     @mkdir($this->testDir, 0755, true);
 
     $this->dbPath = $this->testDir.'/test.sqlite';
@@ -91,12 +91,12 @@ it('truncates all data', function () {
 
 it('uses environment variable for database path', function () {
     $testPath = $this->testDir.'/env-test.sqlite';
-    putenv("LAUNCHPAD_TEST_DB={$testPath}");
+    putenv("ORBIT_TEST_DB={$testPath}");
 
     $db = new DatabaseService;
 
     expect($db->getDbPath())->toBe($testPath);
 
     // Clean up
-    putenv('LAUNCHPAD_TEST_DB');
+    putenv('ORBIT_TEST_DB');
 });

@@ -104,8 +104,8 @@ class MacAdapter implements PlatformAdapter
         $normalizedVersion = $this->normalizePhpVersion($version);
         $normalized = str_replace('.', '', $normalizedVersion); // Remove dot: 8.4 -> 84
 
-        // Use custom launchpad socket path for consistency
-        return $this->getHomePath()."/.config/launchpad/php/php{$normalized}.sock";
+        // Use custom orbit socket path for consistency
+        return $this->getHomePath()."/.config/orbit/php/php{$normalized}.sock";
     }
 
     /**
@@ -136,7 +136,7 @@ class MacAdapter implements PlatformAdapter
      */
     protected function getCaddyfilePath(): string
     {
-        return $this->getHomePath().'/.config/launchpad/caddy/Caddyfile';
+        return $this->getHomePath().'/.config/orbit/caddy/Caddyfile';
     }
 
     public function getPhpBinaryPath(string $version): string

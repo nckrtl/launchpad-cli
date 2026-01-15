@@ -67,7 +67,7 @@ class ServiceInfoCommand extends Command
 
         if ($config === null && $template === null) {
             $this->error("  Service '{$serviceName}' not found");
-            $this->line("  <fg=gray>Use 'launchpad service:list --available' to see available services</>");
+            $this->line("  <fg=gray>Use 'orbit service:list --available' to see available services</>");
             $this->newLine();
 
             return self::FAILURE;
@@ -104,7 +104,7 @@ class ServiceInfoCommand extends Command
             }
         } else {
             $this->line('  <fg=yellow>Not configured</>');
-            $this->line("  <fg=gray>Run 'launchpad service:enable {$serviceName}' to enable this service</>");
+            $this->line("  <fg=gray>Run 'orbit service:enable {$serviceName}' to enable this service</>");
         }
 
         // Show configuration schema if available
@@ -121,7 +121,7 @@ class ServiceInfoCommand extends Command
             }
 
             $this->newLine();
-            $this->line('  <fg=gray>Use \'launchpad service:configure '.$serviceName.' --set key=value\' to configure</>');
+            $this->line('  <fg=gray>Use \'orbit service:configure '.$serviceName.' --set key=value\' to configure</>');
         }
 
         $this->newLine();

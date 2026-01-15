@@ -18,9 +18,9 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 #[IsReadOnly]
 final class StatusTool extends Tool
 {
-    protected string $name = 'launchpad_status';
+    protected string $name = 'orbit_status';
 
-    protected string $description = 'Get Launchpad service status including running containers, sites count, TLD, and default PHP version';
+    protected string $description = 'Get Orbit service status including running containers, sites count, TLD, and default PHP version';
 
     public function __construct(
         protected DockerManager $dockerManager,
@@ -44,7 +44,7 @@ final class StatusTool extends Tool
         // Core services (always Docker containers)
         $coreServices = ['dns', 'caddy', 'postgres', 'redis', 'mailpit'];
         foreach ($coreServices as $service) {
-            $container = 'launchpad-'.$service;
+            $container = 'orbit-'.$service;
             $services[$service] = [
                 'status' => $this->dockerManager->isRunning($container) ? 'running' : 'stopped',
                 'container' => $container,
@@ -70,7 +70,7 @@ final class StatusTool extends Tool
             // FrankenPHP Docker containers
             $phpVersions = ['83', '84', '85'];
             foreach ($phpVersions as $version) {
-                $container = "launchpad-php-{$version}";
+                $container = "orbit-php-{$version}";
                 $services["php-{$version}"] = [
                     'status' => $this->dockerManager->isRunning($container) ? 'running' : 'stopped',
                     'container' => $container,
@@ -81,15 +81,15 @@ final class StatusTool extends Tool
         // Optional services
         if ($this->configManager->isServiceEnabled('reverb')) {
             $services['reverb'] = [
-                'status' => $this->dockerManager->isRunning('launchpad-reverb') ? 'running' : 'stopped',
-                'container' => 'launchpad-reverb',
+                'status' => $this->dockerManager->isRunning('orbit-reverb') ? 'running' : 'stopped',
+                'container' => 'orbit-reverb',
             ];
         }
 
         if ($this->configManager->isServiceEnabled('horizon')) {
             $services['horizon'] = [
-                'status' => $this->dockerManager->isRunning('launchpad-horizon') ? 'running' : 'stopped',
-                'container' => 'launchpad-horizon',
+                'status' => $this->dockerManager->isRunning('orbit-horizon') ? 'running' : 'stopped',
+                'container' => 'orbit-horizon',
             ];
         }
 

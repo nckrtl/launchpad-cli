@@ -1,6 +1,6 @@
-# Launchpad Web App
+# Orbit Web App
 
-Stateless Laravel API for the Launchpad Desktop app. Runs in a FrankenPHP Docker container and uses Horizon for queue processing.
+Stateless Laravel API for the Orbit Desktop app. Runs in a FrankenPHP Docker container and uses Horizon for queue processing.
 
 ## Architecture
 
@@ -8,7 +8,7 @@ Stateless Laravel API for the Launchpad Desktop app. Runs in a FrankenPHP Docker
 Desktop App                     Remote Server (HOST)
 ┌─────────────┐               ┌───────────────────────────────────────────────┐
 │ Vue Form    │               │                                               │
-│     │       │    HTTPS      │  PHP Container (launchpad-php-XX)             │
+│     │       │    HTTPS      │  PHP Container (orbit-php-XX)             │
 │     ▼       │ ─────────────►│  └─ This Web App                              │
 │ POST /api/  │               │      └─ ApiController / ProjectController     │
 │  projects   │               │          └─ dispatch(Job)                     │
@@ -17,7 +17,7 @@ Desktop App                     Remote Server (HOST)
                               │  Docker container                           │
                               │  └─ Horizon Worker                            │
                               │      └─ CreateProjectJob / DeleteProjectJob   │
-                              │          └─ launchpad CLI command             │
+                              │          └─ orbit CLI command             │
                               └───────────────────────────────────────────────┘
 ```
 
@@ -25,13 +25,13 @@ Desktop App                     Remote Server (HOST)
 - Web app runs in Docker container (FrankenPHP)
 - Jobs dispatch to Redis queue for operations that need CLI access
 - Horizon runs on HOST (not in container) because CLI needs host filesystem access
-- Different `REDIS_HOST`: containers use `launchpad-redis`, host uses `127.0.0.1`
+- Different `REDIS_HOST`: containers use `orbit-redis`, host uses `127.0.0.1`
 
 ## Deployment
 
-Deployed automatically via `launchpad web:install` CLI command:
-- Location: `~/.config/launchpad/web/`
-- Configuration: `~/.config/launchpad/web/.env`
+Deployed automatically via `orbit web:install` CLI command:
+- Location: `~/.config/orbit/web/`
+- Configuration: `~/.config/orbit/web/.env`
 
 ## API Endpoints
 
@@ -49,7 +49,7 @@ Deployed automatically via `launchpad web:install` CLI command:
 
 | Method | Endpoint | Handler | Description |
 |--------|----------|---------|-------------|
-| GET | `/api/status` | `ApiController@status` | Get launchpad service status |
+| GET | `/api/status` | `ApiController@status` | Get orbit service status |
 | POST | `/api/start` | `ApiController@start` | Start all services |
 | POST | `/api/stop` | `ApiController@stop` | Stop all services |
 | POST | `/api/restart` | `ApiController@restart` | Restart all services |
@@ -62,7 +62,7 @@ Deployed automatically via `launchpad web:install` CLI command:
 
 | Method | Endpoint | Handler | Description |
 |--------|----------|---------|-------------|
-| GET | `/api/config` | `ApiController@config` | Get launchpad configuration |
+| GET | `/api/config` | `ApiController@config` | Get orbit configuration |
 | POST | `/api/config` | `ApiController@saveConfig` | Save configuration |
 | GET | `/api/sites` | `ApiController@sites` | List all sites |
 | GET | `/api/php-versions` | `ApiController@phpVersions` | List available PHP versions |
@@ -112,7 +112,7 @@ Located at `app/Jobs/CreateProjectJob.php`. Dispatched when a project is created
 
 **What it does:**
 1. Sets up environment (HOME, PATH)
-2. Runs `launchpad provision` CLI command
+2. Runs `orbit provision` CLI command
 3. Broadcasts status updates via Reverb (if reachable)
 
 **Critical: PATH Configuration**
@@ -137,7 +137,7 @@ $process = Process::timeout(900)->env([
 Located at `app/Jobs/DeleteProjectJob.php`. Dispatched when a project is deleted via API.
 
 **What it does:**
-1. Runs `launchpad project:delete --slug={slug} --force --json`
+1. Runs `orbit project:delete --slug={slug} --force --json`
 2. Broadcasts deletion status via Reverb (if reachable)
 3. Optionally deletes GitHub repo (`--delete-repo`) or keeps database (`--keep-db`)
 
@@ -148,18 +148,18 @@ Located at `app/Jobs/DeleteProjectJob.php`. Dispatched when a project is deleted
 
 ## Horizon Configuration
 
-Horizon runs in a Docker container (`launchpad-horizon`):
+Horizon runs in a Docker container (`orbit-horizon`):
 
 - Uses the same PHP image as web containers
 - Mounts the web app at `/app`
 - Mounts `~/projects/` for provisioning access
-- Mounts CLI binary for `launchpad` commands
+- Mounts CLI binary for `orbit` commands
 - Connects to Redis/Reverb via Docker network
 
 **Why Docker container works:**
 - Web app and Horizon share the same container environment
 - Mounts give access to host filesystem (`~/projects/`)
-- CLI binary mounted from host at `/usr/local/bin/launchpad`
+- CLI binary mounted from host at `/usr/local/bin/orbit`
 - PATH includes host bin directories via volume mounts
 
 ## Debugging
@@ -167,47 +167,47 @@ Horizon runs in a Docker container (`launchpad-horizon`):
 ### Check Horizon Status
 
 ```bash
-launchpad horizon:status
-docker ps | grep launchpad-horizon
+orbit horizon:status
+docker ps | grep orbit-horizon
 ```
 
 ### View Job Logs
 
 ```bash
-docker logs launchpad-horizon --tail 100 -f
-tail -f ~/.config/launchpad/web/storage/logs/laravel.log | grep -E "CreateProjectJob|DeleteProjectJob"
+docker logs orbit-horizon --tail 100 -f
+tail -f ~/.config/orbit/web/storage/logs/laravel.log | grep -E "CreateProjectJob|DeleteProjectJob"
 ```
 
 ### Check for Failed Jobs
 
 ```bash
-docker exec launchpad-horizon php artisan queue:failed
+docker exec orbit-horizon php artisan queue:failed
 ```
 
 ### Restart Horizon
 
 ```bash
-docker restart launchpad-horizon
+docker restart orbit-horizon
 # Or via CLI:
-launchpad horizon:stop && launchpad horizon:start
+orbit horizon:stop && orbit horizon:start
 ```
 
 ### Test API Directly
 
 ```bash
 # Create project
-curl -X POST https://launchpad.ccc/api/projects \
+curl -X POST https://orbit.ccc/api/projects \
   -H "Content-Type: application/json" \
   -d '{"name": "test-api", "template": "hardimpactdev/liftoff-starterkit", "db_driver": "pgsql", "visibility": "private"}'
 
 # Delete project
-curl -X DELETE https://launchpad.ccc/api/projects/test-api
+curl -X DELETE https://orbit.ccc/api/projects/test-api
 
 # Check status
-curl https://launchpad.ccc/api/status | jq
+curl https://orbit.ccc/api/status | jq
 
 # List projects
-curl https://launchpad.ccc/api/projects | jq
+curl https://orbit.ccc/api/projects | jq
 ```
 
 ## Known Issues
@@ -220,8 +220,8 @@ If API calls return `{"success":false,"error":"Command failed"}`, the command is
 
 ### Horizon Using Wrong Redis Host
 
-If Horizon cannot connect to Redis, ensure the container is on the launchpad Docker network.
+If Horizon cannot connect to Redis, ensure the container is on the orbit Docker network.
 
 ### Broadcasts Failing
 
-Horizon runs on HOST which doesn't use launchpad DNS. If `reverb.ccc` doesn't resolve, broadcasts fail. This is handled gracefully (non-blocking).
+Horizon runs on HOST which doesn't use orbit DNS. If `reverb.ccc` doesn't resolve, broadcasts fail. This is handled gracefully (non-blocking).

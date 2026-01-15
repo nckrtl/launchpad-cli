@@ -22,11 +22,11 @@
                     },
                     "MYSQL_DATABASE": {
                         "type": "string",
-                        "default": "launchpad"
+                        "default": "orbit"
                     },
                     "MYSQL_USER": {
                         "type": "string",
-                        "default": "launchpad"
+                        "default": "orbit"
                     },
                     "MYSQL_PASSWORD": {
                         "type": "string",
@@ -42,8 +42,8 @@
         "volumes": ["${data_path}:/var/lib/mysql"],
         "environment": {
             "MYSQL_ROOT_PASSWORD": "secret",
-            "MYSQL_DATABASE": "launchpad",
-            "MYSQL_USER": "launchpad",
+            "MYSQL_DATABASE": "orbit",
+            "MYSQL_USER": "orbit",
             "MYSQL_PASSWORD": "secret"
         },
         "healthcheck": {

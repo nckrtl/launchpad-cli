@@ -13,7 +13,7 @@ use Laravel\Mcp\Server\Resource;
 
 class InfrastructureResource extends Resource
 {
-    protected string $uri = 'launchpad://infrastructure';
+    protected string $uri = 'orbit://infrastructure';
 
     protected string $mimeType = 'application/json';
 
@@ -49,11 +49,11 @@ class InfrastructureResource extends Resource
 
         // Core Docker containers (same for both architectures)
         $coreContainers = [
-            'dns' => 'launchpad-dns',
-            'caddy' => 'launchpad-caddy',
-            'postgres' => 'launchpad-postgres',
-            'redis' => 'launchpad-redis',
-            'mailpit' => 'launchpad-mailpit',
+            'dns' => 'orbit-dns',
+            'caddy' => 'orbit-caddy',
+            'postgres' => 'orbit-postgres',
+            'redis' => 'orbit-redis',
+            'mailpit' => 'orbit-mailpit',
         ];
 
         foreach ($coreContainers as $name => $container) {
@@ -104,9 +104,9 @@ class InfrastructureResource extends Resource
         } else {
             // FrankenPHP Docker containers
             $phpContainers = [
-                'php-83' => 'launchpad-php-83',
-                'php-84' => 'launchpad-php-84',
-                'php-85' => 'launchpad-php-85',
+                'php-83' => 'orbit-php-83',
+                'php-84' => 'orbit-php-84',
+                'php-85' => 'orbit-php-85',
             ];
 
             foreach ($phpContainers as $name => $container) {
@@ -134,7 +134,7 @@ class InfrastructureResource extends Resource
         $optionalServices = ['reverb', 'horizon'];
         foreach ($optionalServices as $service) {
             if ($this->configManager->isServiceEnabled($service)) {
-                $container = "launchpad-{$service}";
+                $container = "orbit-{$service}";
                 $isRunning = $this->dockerManager->isRunning($container);
                 $health = $isRunning ? $this->dockerManager->getHealthStatus($container) : null;
 
@@ -170,13 +170,13 @@ class InfrastructureResource extends Resource
     protected function getContainerPorts(string $container): array
     {
         $portsMap = [
-            'launchpad-dns' => ['53/udp', '53/tcp'],
-            'launchpad-caddy' => ['80/tcp', '443/tcp'],
-            'launchpad-postgres' => ['5432/tcp'],
-            'launchpad-redis' => ['6379/tcp'],
-            'launchpad-mailpit' => ['1025/tcp', '8025/tcp'],
-            'launchpad-reverb' => ['6001/tcp', '6002/tcp'],
-            'launchpad-horizon' => [],
+            'orbit-dns' => ['53/udp', '53/tcp'],
+            'orbit-caddy' => ['80/tcp', '443/tcp'],
+            'orbit-postgres' => ['5432/tcp'],
+            'orbit-redis' => ['6379/tcp'],
+            'orbit-mailpit' => ['1025/tcp', '8025/tcp'],
+            'orbit-reverb' => ['6001/tcp', '6002/tcp'],
+            'orbit-horizon' => [],
         ];
 
         return $portsMap[$container] ?? [];

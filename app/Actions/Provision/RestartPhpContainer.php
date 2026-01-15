@@ -12,7 +12,7 @@ final readonly class RestartPhpContainer
 {
     public function handle(string $phpVersion, ProvisionLogger $logger): StepResult
     {
-        $container = 'launchpad-php-'.str_replace('.', '', $phpVersion);
+        $container = 'orbit-php-'.str_replace('.', '', $phpVersion);
 
         $logger->info("Restarting {$container} to clear cached state...");
 
