@@ -3,6 +3,7 @@
     "label": "Laravel Reverb",
     "description": "Blazing fast WebSocket server for Laravel",
     "category": "communication",
+    "required": true,
     "versions": ["latest"],
     "configSchema": {
         "required": ["port"],
