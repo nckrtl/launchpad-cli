@@ -1,8 +1,8 @@
 {
-    "name": "nckrtl/orbit-cli",
+    "name": "hardimpactdev/orbit-cli",
     "description": "Local PHP development environment powered by Docker",
     "keywords": ["php", "docker", "development", "local", "cli"],
-    "homepage": "https://github.com/nckrtl/orbit-cli",
+    "homepage": "https://github.com/hardimpactdev/orbit-cli",
     "type": "project",
     "license": "MIT",
     "authors": [

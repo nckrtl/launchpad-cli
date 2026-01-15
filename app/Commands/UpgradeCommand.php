@@ -19,7 +19,7 @@ class UpgradeCommand extends Command
 
     protected $description = 'Upgrade Orbit to the latest version';
 
-    private const GITHUB_API_URL = 'https://api.github.com/repos/nckrtl/orbit-cli/releases/latest';
+    private const GITHUB_API_URL = 'https://api.github.com/repos/hardimpactdev/orbit-cli/releases/latest';
 
     public function handle(ConfigManager $configManager): int
     {

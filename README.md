@@ -15,7 +15,7 @@ A local PHP development environment powered by Docker. Orbit provides a simple, 
 Download the latest release:
 
 ```bash
-curl -L -o ~/.local/bin/orbit https://github.com/nckrtl/orbit-cli/releases/latest/download/orbit.phar
+curl -L -o ~/.local/bin/orbit https://github.com/hardimpactdev/orbit-cli/releases/latest/download/orbit.phar
 chmod +x ~/.local/bin/orbit
 ```
 
@@ -233,7 +233,7 @@ Worktrees are served from `<worktree-name>.<site>.test`.
 ### Setup
 
 ```bash
-git clone https://github.com/nckrtl/orbit-cli.git
+git clone https://github.com/hardimpactdev/orbit-cli.git
 cd orbit-cli
 composer install
 
