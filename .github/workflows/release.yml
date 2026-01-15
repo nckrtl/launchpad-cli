@@ -45,14 +45,14 @@ jobs:
         run: php box.phar compile
 
       - name: Generate checksum
-        run: sha256sum orbit.phar > checksums.txt
+        run: sha256sum builds/orbit.phar > builds/checksums.txt
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            orbit.phar
-            checksums.txt
+            builds/orbit.phar
+            builds/checksums.txt
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
