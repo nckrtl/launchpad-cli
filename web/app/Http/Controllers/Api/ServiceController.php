@@ -2,63 +2,75 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Jobs\Services\DisableServiceJob;
+use App\Jobs\Services\EnableServiceJob;
+use App\Jobs\Services\RestartServiceJob;
+use App\Jobs\Services\StartServiceJob;
+use App\Jobs\Services\StopServiceJob;
+use App\Models\TrackedJob;
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 
-class ServiceController extends ApiController
+class ServiceController extends Controller
 {
-    /**
-     * List enabled services.
-     */
-    public function index(): JsonResponse
+    public function status()
     {
-        return response()->json($this->executeCommand('service:list'));
-    }
+        // Synchronous call - returns current status immediately
+        $launchpadBinary = env('LAUNCHPAD_BINARY', '/usr/local/bin/launchpad');
+        $result = Process::timeout(30)->run("{$launchpadBinary} status --json");
 
-    /**
-     * List available services.
-     */
-    public function available(): JsonResponse
-    {
-        return response()->json($this->executeCommand('service:list', ['available' => true]));
-    }
+        if ($result->successful()) {
+            $data = json_decode($result->output(), true);
 
-    /**
-     * Enable a service.
-     */
-    public function enable(string $service): JsonResponse
-    {
-        return response()->json($this->executeCommand('service:enable '.escapeshellarg($service)));
-    }
-
-    /**
-     * Disable a service.
-     */
-    public function disable(string $service): JsonResponse
-    {
-        return response()->json($this->executeCommand('service:disable '.escapeshellarg($service)));
-    }
-
-    /**
-     * Update service config.
-     */
-    public function updateConfig(Request $request, string $service): JsonResponse
-    {
-        $config = $request->input('config', []);
-
-        $cmd = 'service:configure '.escapeshellarg($service);
-        foreach ($config as $key => $value) {
-            $cmd .= ' --set='.escapeshellarg("{$key}={$value}");
+            return response()->json($data);
         }
 
-        return response()->json($this->executeCommand($cmd));
+        return response()->json([
+            'success' => false,
+            'error' => $result->errorOutput() ?: 'Failed to get status',
+        ], 500);
     }
 
-    /**
-     * Get service template details.
-     */
-    public function info(string $service): JsonResponse
+    public function start(string $service)
     {
-        return response()->json($this->executeCommand('service:info '.escapeshellarg($service)));
+        return $this->dispatchServiceJob('start_service', $service, StartServiceJob::class, 'start');
+    }
+
+    public function stop(string $service)
+    {
+        return $this->dispatchServiceJob('stop_service', $service, StopServiceJob::class, 'stop');
+    }
+
+    public function restart(string $service)
+    {
+        return $this->dispatchServiceJob('restart_service', $service, RestartServiceJob::class, 'restart');
+    }
+
+    public function enable(string $service)
+    {
+        return $this->dispatchServiceJob('enable_service', $service, EnableServiceJob::class, 'enable');
+    }
+
+    public function disable(string $service)
+    {
+        return $this->dispatchServiceJob('disable_service', $service, DisableServiceJob::class, 'disable');
+    }
+
+    private function dispatchServiceJob(string $type, string $service, string $jobClass, string $action)
+    {
+        $jobId = (string) Str::uuid();
+
+        TrackedJob::create([
+            'id' => $jobId,
+            'type' => $type,
+            'subject' => $service,
+            'status' => 'pending',
+            'payload' => ['action' => $action],
+        ]);
+
+        $jobClass::dispatch($jobId, $service);
+
+        return response()->json(['jobId' => $jobId], 202);
     }
 }

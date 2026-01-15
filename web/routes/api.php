@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\ServiceController;
 use Illuminate\Support\Facades\Route;
@@ -16,13 +17,13 @@ Route::get('/config', [ApiController::class, 'config']);
 Route::post('/config', [ApiController::class, 'saveConfig']);
 Route::get('/php-versions', [ApiController::class, 'phpVersions']);
 
-// Service Control
-Route::post('/start', [ApiController::class, 'start']);
-Route::post('/stop', [ApiController::class, 'stop']);
-Route::post('/restart', [ApiController::class, 'restart']);
-Route::post('/services/{service}/start', [ApiController::class, 'startService']);
-Route::post('/services/{service}/stop', [ApiController::class, 'stopService']);
-Route::post('/services/{service}/restart', [ApiController::class, 'restartService']);
+// Service routes
+Route::get('/services/status', [ServiceController::class, 'status']);
+Route::post('/services/{service}/start', [ServiceController::class, 'start']);
+Route::post('/services/{service}/stop', [ServiceController::class, 'stop']);
+Route::post('/services/{service}/restart', [ServiceController::class, 'restart']);
+Route::post('/services/{service}/enable', [ServiceController::class, 'enable']);
+Route::post('/services/{service}/disable', [ServiceController::class, 'disable']);
 Route::get('/services/{service}/logs', [ApiController::class, 'serviceLogs']);
 
 // Host Service Control
@@ -63,10 +64,5 @@ Route::delete('/packages/{app}/unlink/{package}', [ApiController::class, 'unlink
 Route::get('/github/user', [ApiController::class, 'githubUser']);
 Route::get('/github/repo/{owner}/{repo}', [ApiController::class, 'checkRepo']);
 
-// Service Management
-Route::get('/services', [ServiceController::class, 'index']);
-Route::get('/services/available', [ServiceController::class, 'available']);
-Route::post('/services/{service}/enable', [ServiceController::class, 'enable']);
-Route::delete('/services/{service}', [ServiceController::class, 'disable']);
-Route::put('/services/{service}/config', [ServiceController::class, 'updateConfig']);
-Route::get('/services/{service}/info', [ServiceController::class, 'info']);
+// Jobs
+Route::get('/jobs/{trackedJob}', [JobController::class, 'show']);
