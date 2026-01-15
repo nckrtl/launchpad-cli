@@ -145,11 +145,15 @@ class WebInstallCommand extends Command
         $tld = $configManager->getTld();
         $reverbConfig = $configManager->getReverbConfig();
 
-        // Keep existing APP_KEY if present
-        $existingEnv = File::exists("{$webAppPath}/.env")
-            ? parse_ini_file("{$webAppPath}/.env")
-            : [];
-        $appKey = $existingEnv['APP_KEY'] ?? 'base64:'.base64_encode(random_bytes(32));
+        // Keep existing APP_KEY if present (parse manually to handle base64 = chars)
+        $appKey = null;
+        if (File::exists("{$webAppPath}/.env")) {
+            $envContent = File::get("{$webAppPath}/.env");
+            if (preg_match('/^APP_KEY=(.+)$/m', $envContent, $matches)) {
+                $appKey = trim($matches[1]);
+            }
+        }
+        $appKey = $appKey ?: 'base64:'.base64_encode(random_bytes(32));
 
         $env = <<<ENV
 APP_NAME=Orbit
@@ -164,9 +168,9 @@ LOG_LEVEL=error
 # Stateless - no database needed
 DB_CONNECTION=null
 
-# Redis for everything
+# Redis (localhost since PHP-FPM runs on host)
 REDIS_CLIENT=phpredis
-REDIS_HOST=orbit-redis
+REDIS_HOST=localhost
 REDIS_PASSWORD=null
 REDIS_PORT=6379
 
