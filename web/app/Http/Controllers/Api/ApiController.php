@@ -35,7 +35,7 @@ class ApiController extends Controller
             $result = Process::timeout($timeout)
                 ->env([
                     'HOME' => $home,
-                    'PATH' => "{$home}/.local/bin:{$home}/.config/herd-lite/bin:/usr/local/bin:/usr/bin:/bin",
+                    'PATH' => "{$home}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
                 ])
                 ->run($cmd);
 

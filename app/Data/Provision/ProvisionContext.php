@@ -35,7 +35,7 @@ final class ProvisionContext
 
         return [
             'HOME' => $home,
-            'PATH' => "{$home}/.config/herd-lite/bin:{$home}/.local/bin:/usr/local/bin:/usr/bin:/bin",
+            'PATH' => "{$home}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
         ];
     }
 
@@ -46,7 +46,7 @@ final class ProvisionContext
     {
         $home = $this->getHomeDir();
 
-        return "{$home}/.config/herd-lite/bin:{$home}/.local/bin:/usr/local/bin:/usr/bin:/bin";
+        return "{$home}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
     }
 
     /**

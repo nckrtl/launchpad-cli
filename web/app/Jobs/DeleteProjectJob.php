@@ -46,7 +46,7 @@ class DeleteProjectJob implements ShouldQueue
             $result = Process::timeout($this->timeout - 5)
                 ->env([
                     'HOME' => $home,
-                    'PATH' => "{$home}/.local/bin:{$home}/.config/herd-lite/bin:/usr/local/bin:/usr/bin:/bin",
+                    'PATH' => "{$home}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
                 ])
                 ->run($command);
 

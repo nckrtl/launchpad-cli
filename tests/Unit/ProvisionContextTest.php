@@ -39,7 +39,7 @@ it('returns correct PHP environment', function () {
 
     expect($env)->toHaveKey('HOME');
     expect($env)->toHaveKey('PATH');
-    expect($env['PATH'])->toContain('.config/herd-lite/bin');
+    expect($env['PATH'])->toContain('/opt/homebrew/bin');
     expect($env['PATH'])->toContain('.local/bin');
 });
 

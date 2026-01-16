@@ -125,7 +125,7 @@ $process = Process::timeout(900)->env([
     'HOME' => $home,
     'PATH' => "{$home}/.bun/bin:" .
               "{$home}/.local/bin:" .
-              "{$home}/.config/herd-lite/bin:" .
+              "/opt/homebrew/bin:" .
               "/usr/local/bin:/usr/bin:/bin",
 ]);
 ```

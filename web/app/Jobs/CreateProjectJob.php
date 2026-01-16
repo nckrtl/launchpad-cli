@@ -83,7 +83,7 @@ class CreateProjectJob implements ShouldQueue
             $result = Process::timeout($this->timeout - 10)
                 ->env([
                     'HOME' => $home,
-                    'PATH' => "{$home}/.bun/bin:{$home}/.local/bin:{$home}/.config/herd-lite/bin:/usr/local/bin:/usr/bin:/bin",
+                    'PATH' => "{$home}/.bun/bin:{$home}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
                 ])
                 ->run($command);
 
