@@ -31,14 +31,14 @@ final readonly class BuildAssets
 
         $logger->info("Building assets with {$packageManager}...");
 
-        $home = $context->getHomeDir();
         $projectPath = $context->projectPath;
 
+        // Use env -i to clear inherited environment (prevents APP_KEY pollution from Horizon)
         $result = match ($packageManager) {
-            'bun' => $this->buildWithBun($projectPath, $home),
-            'pnpm' => Process::path($projectPath)->timeout(600)->run('pnpm run build 2>&1'),
-            'yarn' => Process::path($projectPath)->timeout(600)->run('yarn run build 2>&1'),
-            default => Process::path($projectPath)->timeout(600)->run('npm run build 2>&1'),
+            'bun' => $this->buildWithBun($context),
+            'pnpm' => Process::path($projectPath)->timeout(600)->run($context->wrapWithCleanEnv('pnpm run build').' 2>&1'),
+            'yarn' => Process::path($projectPath)->timeout(600)->run($context->wrapWithCleanEnv('yarn run build').' 2>&1'),
+            default => Process::path($projectPath)->timeout(600)->run($context->wrapWithCleanEnv('npm run build').' 2>&1'),
         };
 
         $output = trim($result->output());
@@ -58,13 +58,16 @@ final readonly class BuildAssets
         return StepResult::success();
     }
 
-    private function buildWithBun(string $projectPath, string $home): \Illuminate\Process\ProcessResult
+    private function buildWithBun(ProvisionContext $context): \Illuminate\Process\ProcessResult
     {
+        $home = $context->getHomeDir();
         $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
 
-        return Process::env(['CI' => '1', 'PATH' => "{$home}/.bun/bin:".getenv('PATH')])
-            ->path($projectPath)
+        // Use env -i to clear inherited environment (prevents APP_KEY pollution from Horizon)
+        $command = $context->wrapWithCleanEnv("{$bunPath} run build");
+
+        return Process::path($context->projectPath)
             ->timeout(60)
-            ->run("{$bunPath} run build 2>&1");
+            ->run("{$command} 2>&1");
     }
 }

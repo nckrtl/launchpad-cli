@@ -49,7 +49,7 @@ final readonly class InstallNodeDependencies
         // Detect package manager from lock file
         if (file_exists("{$projectPath}/bun.lock") || file_exists("{$projectPath}/bun.lockb")) {
             $packageManager = 'bun';
-            $result = $this->installWithBun($context, $logger, $home);
+            $result = $this->installWithBun($context, $logger);
         } elseif (file_exists("{$projectPath}/pnpm-lock.yaml")) {
             $packageManager = 'pnpm';
             $result = $this->installWithPnpm($context, $logger);
@@ -68,9 +68,10 @@ final readonly class InstallNodeDependencies
         return StepResult::success(['packageManager' => $packageManager]);
     }
 
-    private function installWithBun(ProvisionContext $context, ProvisionLogger $logger, string $home): StepResult
+    private function installWithBun(ProvisionContext $context, ProvisionLogger $logger): StepResult
     {
         $projectPath = $context->projectPath;
+        $home = $context->getHomeDir();
         $bunPath = file_exists("{$home}/.bun/bin/bun") ? "{$home}/.bun/bin/bun" : 'bun';
 
         // Remove lock files to allow fresh install
@@ -81,11 +82,12 @@ final readonly class InstallNodeDependencies
         $logger->info('Installing dependencies with Bun...');
 
         try {
+            // Use env -i to clear inherited environment (prevents APP_KEY pollution from Horizon)
             // Use 'bun ci' for CI/background environments - handles non-TTY properly
-            $result = Process::env(['CI' => '1', 'PATH' => "{$home}/.bun/bin:".getenv('PATH')])
-                ->path($projectPath)
+            $command = $context->wrapWithCleanEnv("{$bunPath} ci");
+            $result = Process::path($projectPath)
                 ->timeout(120)
-                ->run("{$bunPath} ci 2>&1");
+                ->run("{$command} 2>&1");
 
             if (! $result->successful()) {
                 return StepResult::failed('Bun install failed: '.substr($result->output(), 0, 500));
@@ -103,9 +105,11 @@ final readonly class InstallNodeDependencies
     {
         $logger->info('Installing dependencies with pnpm...');
 
+        // Use env -i to clear inherited environment
+        $command = $context->wrapWithCleanEnv('pnpm install');
         $result = Process::path($context->projectPath)
             ->timeout(600)
-            ->run('pnpm install');
+            ->run($command);
 
         if (! $result->successful()) {
             return StepResult::failed('pnpm install failed: '.substr($result->errorOutput(), 0, 500));
@@ -120,9 +124,11 @@ final readonly class InstallNodeDependencies
     {
         $logger->info('Installing dependencies with Yarn...');
 
+        // Use env -i to clear inherited environment
+        $command = $context->wrapWithCleanEnv('yarn install');
         $result = Process::path($context->projectPath)
             ->timeout(600)
-            ->run('yarn install');
+            ->run($command);
 
         if (! $result->successful()) {
             return StepResult::failed('Yarn install failed: '.substr($result->errorOutput(), 0, 500));
@@ -137,9 +143,11 @@ final readonly class InstallNodeDependencies
     {
         $logger->info('Installing dependencies with npm...');
 
+        // Use env -i to clear inherited environment
+        $command = $context->wrapWithCleanEnv('npm install --legacy-peer-deps');
         $result = Process::path($context->projectPath)
             ->timeout(600)
-            ->run('npm install --legacy-peer-deps 2>&1');
+            ->run("{$command} 2>&1");
 
         if (! $result->successful()) {
             $logger->warn('npm install had issues: '.substr($result->output(), 0, 500));
