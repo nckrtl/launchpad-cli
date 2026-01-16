@@ -2,6 +2,10 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
+## Project Overview
+
+**Orbit CLI** - Local PHP dev environment powered by Docker. Supports both Linux and macOS.
+
 ## Quick Reference
 
 ```bash
@@ -11,6 +15,43 @@ bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
+
+## Quality Gates
+
+Run before every commit/release:
+
+```bash
+./vendor/bin/rector --dry-run
+./vendor/bin/pint --test
+./vendor/bin/phpstan analyse --memory-limit=512M
+./vendor/bin/pest
+```
+
+## Local Development Setup
+
+Dev machine uses symlink (not downloaded PHAR):
+
+```bash
+ln -s /home/nckrtl/projects/orbit-cli/orbit ~/.local/bin/orbit
+```
+
+Ensure `~/.local/bin` is in PATH (already configured in .bashrc).
+
+## Release Workflow
+
+After fixes verified (all tests pass):
+
+1. Bump version if needed
+2. Create tag: `git tag v0.x.y`
+3. Push tag: `git push origin v0.x.y`
+4. GitHub Actions builds PHAR and creates release
+5. Update local: `orbit upgrade` (or pull latest for symlink setup)
+
+## Platform Support
+
+Code must work on both Linux and macOS. Use `PlatformService` for OS detection:
+- `$platform->isMac()` / `$platform->isLinux()`
+- Platform-specific adapters in `app/Services/Platform/`
 
 ## Landing the Plane (Session Completion)
 

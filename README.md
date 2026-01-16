@@ -228,6 +228,10 @@ Worktrees are served from `<worktree-name>.<site>.test`.
 
 **Note:** The `orbit init` command will check for and automatically install missing prerequisites.
 
+## Platform Support
+
+Orbit CLI supports both **Linux** and **macOS**. Platform-specific functionality is handled automatically through `PlatformService`.
+
 ## Development
 
 ### Setup
@@ -239,6 +243,10 @@ composer install
 
 # Enable git hooks
 git config core.hooksPath .githooks
+
+# For local development, symlink instead of downloading PHAR
+ln -s $(pwd)/orbit ~/.local/bin/orbit
+# Ensure ~/.local/bin is in your PATH
 ```
 
 ### Quality Tools
@@ -271,6 +279,23 @@ git config core.hooksPath .githooks
 ### CI
 
 GitHub Actions runs the full quality check suite on every push and PR to main.
+
+### Releasing
+
+After fixes are verified (all tests pass):
+
+```bash
+# 1. Run all quality checks
+./vendor/bin/rector --dry-run && ./vendor/bin/pint --test && ./vendor/bin/phpstan analyse --memory-limit=512M && ./vendor/bin/pest
+
+# 2. Create and push tag (GitHub Actions builds PHAR)
+git tag v0.x.y
+git push origin v0.x.y
+
+# 3. Update local installation
+orbit upgrade  # For PHAR installs
+# Or just `git pull` for symlink dev setup
+```
 
 ## License
 

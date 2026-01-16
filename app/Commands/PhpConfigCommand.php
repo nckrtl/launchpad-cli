@@ -30,19 +30,20 @@ class PhpConfigCommand extends Command
     public function handle(PhpManager $phpManager, PhpSettingsService $settingsService): int
     {
         $version = $this->argument('version');
-        
+
         // If no version specified, use latest installed
-        if (!$version) {
+        if (! $version) {
             $installed = $phpManager->getInstalledVersions();
             if (empty($installed)) {
                 if ($this->wantsJson()) {
                     return $this->outputJsonError('No PHP versions installed.', ExitCode::InvalidArguments->value);
                 }
                 $this->error('No PHP versions installed.');
+
                 return ExitCode::InvalidArguments->value;
             }
             // Sort and get latest
-            usort($installed, 'version_compare');
+            usort($installed, version_compare(...));
             $version = end($installed);
         }
 
@@ -92,13 +93,13 @@ class PhpConfigCommand extends Command
 
         $this->info("PHP {$version} Settings:");
         $this->newLine();
-        
+
         $this->line('<fg=yellow>php.ini:</>');
         $this->line("  upload_max_filesize: {$settings['upload_max_filesize']}");
         $this->line("  post_max_size: {$settings['post_max_size']}");
         $this->line("  memory_limit: {$settings['memory_limit']}");
         $this->line("  max_execution_time: {$settings['max_execution_time']}");
-        
+
         $this->newLine();
         $this->line('<fg=yellow>php-fpm pool:</>');
         $this->line("  pm.max_children: {$settings['max_children']}");
@@ -111,18 +112,19 @@ class PhpConfigCommand extends Command
 
     protected function updateSettings(string $version, array $updates, PhpSettingsService $settingsService): int
     {
-        if (!$this->wantsJson()) {
+        if (! $this->wantsJson()) {
             $this->info("Updating PHP {$version} settings...");
         }
 
         $success = $settingsService->updateSettings($version, $updates);
 
-        if (!$success) {
+        if (! $success) {
             if ($this->wantsJson()) {
-                return $this->outputJsonError('Failed to update settings.', ExitCode::RuntimeError->value);
+                return $this->outputJsonError('Failed to update settings.', ExitCode::GeneralError->value);
             }
             $this->error('Failed to update settings.');
-            return ExitCode::RuntimeError->value;
+
+            return ExitCode::GeneralError->value;
         }
 
         // Get updated settings

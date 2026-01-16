@@ -54,11 +54,13 @@ it('generates caddyfile with sites', function () {
     expect($caddyfile)->toContain('local_certs');
     expect($caddyfile)->toContain('mysite.test');
     expect($caddyfile)->toContain('another.test');
-    expect($caddyfile)->toContain('orbit-php-83');
-    expect($caddyfile)->toContain('orbit-php-84');
+    // Caddyfile uses unix sockets for PHP-FPM
+    expect($caddyfile)->toContain('php_fastcgi unix/');
+    expect($caddyfile)->toContain('php83.sock');
+    expect($caddyfile)->toContain('php84.sock');
 });
 
-it('generates php caddyfile with document roots', function () {
+it('generates caddyfile with php_fastcgi directives', function () {
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->configManager->shouldReceive('getPaths')->andReturn(['~/Projects']);
 
@@ -75,12 +77,12 @@ it('generates php caddyfile with document roots', function () {
     $generator = new CaddyfileGenerator($this->configManager, $this->siteScanner);
     $generator->generate();
 
-    $phpCaddyfile = File::get($this->tempDir.'/php/Caddyfile');
+    $caddyfile = File::get($this->tempDir.'/caddy/Caddyfile');
 
-    expect($phpCaddyfile)->toContain('frankenphp');
-    expect($phpCaddyfile)->toContain('mysite.test:8080');
-    expect($phpCaddyfile)->toContain('/public');
-    expect($phpCaddyfile)->toContain('php_server');
+    expect($caddyfile)->toContain('mysite.test');
+    expect($caddyfile)->toContain('/public');
+    expect($caddyfile)->toContain('php_fastcgi');
+    expect($caddyfile)->toContain('file_server');
 });
 
 it('generates empty caddyfile when no sites exist', function () {

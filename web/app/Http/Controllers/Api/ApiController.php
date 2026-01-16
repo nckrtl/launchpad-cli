@@ -547,7 +547,7 @@ class ApiController extends Controller
         if ($version) {
             $args['version'] = $version;
         }
-        
+
         return response()->json($this->executeCommand('php:config', $args));
     }
 
@@ -585,7 +585,7 @@ class ApiController extends Controller
         ];
 
         foreach ($optionMap as $requestKey => $cliOption) {
-            if (!empty($validated[$requestKey])) {
+            if (! empty($validated[$requestKey])) {
                 $args[$cliOption] = $validated[$requestKey];
             }
         }

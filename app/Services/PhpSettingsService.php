@@ -57,18 +57,18 @@ class PhpSettingsService
         $poolUpdates = [];
         foreach ($poolSettings as $key) {
             if (isset($settings[$key])) {
-                $poolKey = 'pm.' . $key;
+                $poolKey = 'pm.'.$key;
                 $poolUpdates[$poolKey] = $settings[$key];
             }
         }
 
         // Update php.ini
-        if (!empty($iniUpdates)) {
+        if (! empty($iniUpdates)) {
             $this->updateIniFile($iniPath, $iniUpdates);
         }
 
         // Update pool config
-        if (!empty($poolUpdates)) {
+        if (! empty($poolUpdates)) {
             $this->updatePoolFile($poolPath, $poolUpdates);
         }
 
@@ -131,14 +131,14 @@ class PhpSettingsService
      */
     protected function getIniValue(string $path, string $key, string $default = ''): string
     {
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             return $default;
         }
 
         $content = File::get($path);
-        
+
         // Match: key = value (with optional comments after)
-        $pattern = '/^\s*' . preg_quote($key, '/') . '\s*=\s*([^;\n]+)/m';
+        $pattern = '/^\s*'.preg_quote($key, '/').'\s*=\s*([^;\n]+)/m';
         if (preg_match($pattern, $content, $matches)) {
             return trim($matches[1]);
         }
@@ -151,14 +151,14 @@ class PhpSettingsService
      */
     protected function getPoolValue(string $path, string $key, string $default = ''): string
     {
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             return $default;
         }
 
         $content = File::get($path);
-        
+
         // Match: key = value
-        $pattern = '/^\s*' . preg_quote($key, '/') . '\s*=\s*(\S+)/m';
+        $pattern = '/^\s*'.preg_quote($key, '/').'\s*=\s*(\S+)/m';
         if (preg_match($pattern, $content, $matches)) {
             return trim($matches[1]);
         }
@@ -171,7 +171,7 @@ class PhpSettingsService
      */
     protected function updateIniFile(string $path, array $values): bool
     {
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             return false;
         }
 
@@ -179,9 +179,9 @@ class PhpSettingsService
 
         foreach ($values as $key => $value) {
             // Try to replace existing value
-            $pattern = '/^(\s*)(' . preg_quote($key, '/') . ')\s*=\s*[^;\n]*/m';
-            if (preg_match($pattern, $content)) {
-                $content = preg_replace($pattern, "$1$2 = {$value}", $content);
+            $pattern = '/^(\s*)('.preg_quote((string) $key, '/').')\s*=\s*[^;\n]*/m';
+            if (preg_match($pattern, (string) $content)) {
+                $content = preg_replace($pattern, "$1$2 = {$value}", (string) $content);
             } else {
                 // Add new value at the end
                 $content .= "\n{$key} = {$value}\n";
@@ -189,9 +189,9 @@ class PhpSettingsService
         }
 
         // Write using sudo for system files
-        $tempFile = sys_get_temp_dir() . '/php_ini_' . uniqid();
+        $tempFile = sys_get_temp_dir().'/php_ini_'.uniqid();
         File::put($tempFile, $content);
-        
+
         $result = Process::run("sudo cp {$tempFile} {$path}");
         File::delete($tempFile);
 
@@ -203,7 +203,7 @@ class PhpSettingsService
      */
     protected function updatePoolFile(string $path, array $values): bool
     {
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             return false;
         }
 
@@ -211,9 +211,9 @@ class PhpSettingsService
 
         foreach ($values as $key => $value) {
             // Try to replace existing value
-            $pattern = '/^(\s*)(' . preg_quote($key, '/') . ')\s*=\s*\S+/m';
-            if (preg_match($pattern, $content)) {
-                $content = preg_replace($pattern, "$1$2 = {$value}", $content);
+            $pattern = '/^(\s*)('.preg_quote((string) $key, '/').')\s*=\s*\S+/m';
+            if (preg_match($pattern, (string) $content)) {
+                $content = preg_replace($pattern, "$1$2 = {$value}", (string) $content);
             } else {
                 // Add new value at the end (before last line if exists)
                 $content .= "\n{$key} = {$value}\n";
@@ -221,9 +221,9 @@ class PhpSettingsService
         }
 
         // Write using sudo for system files
-        $tempFile = sys_get_temp_dir() . '/php_pool_' . uniqid();
+        $tempFile = sys_get_temp_dir().'/php_pool_'.uniqid();
         File::put($tempFile, $content);
-        
+
         $result = Process::run("sudo cp {$tempFile} {$path}");
         File::delete($tempFile);
 
@@ -236,13 +236,13 @@ class PhpSettingsService
     protected function normalizeVersion(string $version): string
     {
         $version = str_replace(['php@', 'php'], '', $version);
-        
+
         if (preg_match('/^\d+\.\d+$/', $version)) {
             return $version;
         }
-        
+
         if (preg_match('/^\d{2}$/', $version)) {
-            return substr($version, 0, 1) . '.' . substr($version, 1);
+            return substr($version, 0, 1).'.'.substr($version, 1);
         }
 
         return $version;
