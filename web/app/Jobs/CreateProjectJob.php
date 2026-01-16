@@ -38,7 +38,7 @@ class CreateProjectJob implements ShouldQueue
     public function handle(): void
     {
         $orbit = $this->findOrbitBinary();
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
 
         try {
             $this->broadcast('provisioning');
@@ -110,7 +110,7 @@ class CreateProjectJob implements ShouldQueue
 
     private function findOrbitBinary(): string
     {
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
         $paths = ["{$home}/.local/bin/orbit", '/usr/local/bin/orbit', "{$home}/projects/orbit-cli/orbit"];
         foreach ($paths as $path) {
             if (file_exists($path) && is_executable($path)) {

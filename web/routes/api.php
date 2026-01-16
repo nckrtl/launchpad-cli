@@ -66,3 +66,7 @@ Route::get('/github/repo/{owner}/{repo}', [ApiController::class, 'checkRepo']);
 
 // Jobs
 Route::get('/jobs/{trackedJob}', [JobController::class, 'show']);
+
+// PHP Configuration
+Route::get('/php/config/{version?}', [ApiController::class, 'getPhpConfig']);
+Route::post('/php/config/{version?}', [ApiController::class, 'setPhpConfig']);

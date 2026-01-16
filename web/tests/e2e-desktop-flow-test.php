@@ -109,7 +109,7 @@ function visitUrlWithResolve(string $host, string $tld): array
  */
 function getLoggedStatuses(string $slug, string $type): array
 {
-    $home = $_SERVER['HOME'] ?? '/home/launchpad';
+    $home = $_SERVER['HOME'] ?? '/home/orbit';
     $logDir = $type === 'provision' ? 'provision' : 'deletion';
     $logFile = "{$home}/.config/orbit/logs/{$logDir}/{$slug}.log";
 
@@ -153,7 +153,7 @@ function checkDatabaseTables(string $slug): array
  */
 function checkLaravelLogs(string $slug): array
 {
-    $home = $_SERVER['HOME'] ?? '/home/launchpad';
+    $home = $_SERVER['HOME'] ?? '/home/orbit';
     $logFile = "{$home}/projects/{$slug}/storage/logs/laravel.log";
     $errors = [];
 

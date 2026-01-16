@@ -29,7 +29,7 @@ $tld = $options['tld'] ?? getenv('TLD') ?: 'ccc';
 $timeout = (int) ($options['timeout'] ?? 120);
 $slug = 'e2e-test-'.time();
 $apiBase = "https://orbit.{$tld}/api";
-$home = getenv('HOME') ?: '/home/launchpad';
+$home = getenv('HOME') ?: '/home/orbit';
 
 echo "=== E2E Broadcast Test ===\n";
 echo "TLD: {$tld}\n";

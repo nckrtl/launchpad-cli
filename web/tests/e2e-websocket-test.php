@@ -71,7 +71,7 @@ echo "  HTTP {$httpCode}: {$response}\n";
 
 // Wait for provisioning
 echo "\n[4] Waiting for provisioning (checking log + Reverb)...\n";
-$home = $_SERVER['HOME'] ?? '/home/launchpad';
+$home = $_SERVER['HOME'] ?? '/home/orbit';
 $logFile = "{$home}/.config/orbit/logs/provision/{$slug}.log";
 $timeout = 120;
 $start = time();

@@ -26,7 +26,7 @@ final class ProvisionContext
 
     public function getHomeDir(): string
     {
-        return $_SERVER['HOME'] ?? '/home/launchpad';
+        return $_SERVER['HOME'] ?? '/home/orbit';
     }
 
     public function getPhpEnv(): array

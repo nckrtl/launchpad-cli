@@ -2,23 +2,31 @@
 
 use App\Enums\ExitCode;
 use App\Services\CaddyfileGenerator;
-use App\Services\DockerManager;
-use App\Services\PhpComposeGenerator;
+use App\Services\CaddyManager;
+use App\Services\HorizonManager;
+use App\Services\PhpManager;
+use App\Services\ServiceManager;
 
 beforeEach(function () {
-    $this->dockerManager = Mockery::mock(DockerManager::class);
+    $this->serviceManager = Mockery::mock(ServiceManager::class);
     $this->caddyfileGenerator = Mockery::mock(CaddyfileGenerator::class);
-    $this->phpComposeGenerator = Mockery::mock(PhpComposeGenerator::class);
+    $this->phpManager = Mockery::mock(PhpManager::class);
+    $this->caddyManager = Mockery::mock(CaddyManager::class);
+    $this->horizonManager = Mockery::mock(HorizonManager::class);
 
-    $this->app->instance(DockerManager::class, $this->dockerManager);
+    $this->app->instance(ServiceManager::class, $this->serviceManager);
     $this->app->instance(CaddyfileGenerator::class, $this->caddyfileGenerator);
-    $this->app->instance(PhpComposeGenerator::class, $this->phpComposeGenerator);
+    $this->app->instance(PhpManager::class, $this->phpManager);
+    $this->app->instance(CaddyManager::class, $this->caddyManager);
+    $this->app->instance(HorizonManager::class, $this->horizonManager);
 });
 
 it('starts all services successfully', function () {
+    // No FPM sockets - FrankenPHP mode
+    $this->phpManager->shouldReceive('getSocketPath')->andReturn('/tmp/nonexistent.sock');
+
     $this->caddyfileGenerator->shouldReceive('generate')->once();
-    $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
+    $this->serviceManager->shouldReceive('startAll')->once()->andReturn(true);
 
     $this->artisan('start')
         ->expectsOutputToContain('Orbit is running')
@@ -26,9 +34,11 @@ it('starts all services successfully', function () {
 });
 
 it('reports failure when a service fails to start', function () {
+    // No FPM sockets - FrankenPHP mode
+    $this->phpManager->shouldReceive('getSocketPath')->andReturn('/tmp/nonexistent.sock');
+
     $this->caddyfileGenerator->shouldReceive('generate')->once();
-    $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->andReturn(false);
+    $this->serviceManager->shouldReceive('startAll')->once()->andReturn(false);
 
     $this->artisan('start')
         ->expectsOutputToContain('Some services failed to start')
@@ -36,9 +46,11 @@ it('reports failure when a service fails to start', function () {
 });
 
 it('outputs json when --json flag is used', function () {
+    // No FPM sockets - FrankenPHP mode
+    $this->phpManager->shouldReceive('getSocketPath')->andReturn('/tmp/nonexistent.sock');
+
     $this->caddyfileGenerator->shouldReceive('generate')->once();
-    $this->phpComposeGenerator->shouldReceive('generate')->once();
-    $this->dockerManager->shouldReceive('start')->times(7)->andReturn(true);
+    $this->serviceManager->shouldReceive('startAll')->once()->andReturn(true);
 
     $this->artisan('start --json')
         ->assertExitCode(0);

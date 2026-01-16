@@ -9,4 +9,5 @@ return RectorConfig::configure()
         __DIR__.'/app',
     ])
     ->withPhpSets(php82: true)
-    ->withTypeCoverageLevel(0);
+    ->withTypeCoverageLevel(0)
+    ->withCache(__DIR__.'/var/cache/rector');

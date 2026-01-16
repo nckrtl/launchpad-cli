@@ -3,107 +3,92 @@
 use App\Services\ProvisionLogger;
 
 beforeEach(function () {
-    $this->logDir = sys_get_temp_dir().'/orbit-tests/logs';
-    @mkdir($this->logDir, 0755, true);
+    $this->testHome = sys_get_temp_dir().'/orbit-tests-'.getmypid();
+    $this->originalHome = $_SERVER['HOME'] ?? null;
+    $_SERVER['HOME'] = $this->testHome;
+
+    // Pre-create the directory structure to avoid permission issues
+    $logsDir = $this->testHome.'/.config/orbit/logs/provision';
+    if (! is_dir($logsDir)) {
+        mkdir($logsDir, 0755, true);
+    }
 });
 
 afterEach(function () {
-    deleteDirectory(sys_get_temp_dir().'/orbit-tests');
+    if ($this->originalHome !== null) {
+        $_SERVER['HOME'] = $this->originalHome;
+    } else {
+        unset($_SERVER['HOME']);
+    }
+
+    // Clean up test directory
+    if (is_dir($this->testHome)) {
+        deleteDirectory($this->testHome);
+    }
 });
 
 it('creates log file when slug is provided', function () {
-    // Override HOME for this test
-    $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
-
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->info('Test message');
 
-    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
+    $logFile = $this->testHome.'/.config/orbit/logs/provision/test-project.log';
     expect(file_exists($logFile))->toBeTrue();
-    expect(file_get_contents($logFile))->toContain('Test message');
 
-    if ($originalHome !== null) {
-        $_SERVER['HOME'] = $originalHome;
-    }
+    $content = file_get_contents($logFile);
+    expect($content)->toBeString()->toContain('Test message');
 });
 
 it('logs info messages', function () {
-    $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
-
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->info('Info message');
 
-    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
-    $content = file_get_contents($logFile);
-    expect($content)->toContain('Info message');
+    $logFile = $this->testHome.'/.config/orbit/logs/provision/test-project.log';
+    expect(file_exists($logFile))->toBeTrue();
 
-    if ($originalHome !== null) {
-        $_SERVER['HOME'] = $originalHome;
-    }
+    $content = file_get_contents($logFile);
+    expect($content)->toBeString()->toContain('Info message');
 });
 
 it('logs warning messages with prefix', function () {
-    $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
-
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->warn('Warning message');
 
-    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
-    $content = file_get_contents($logFile);
-    expect($content)->toContain('WARNING: Warning message');
+    $logFile = $this->testHome.'/.config/orbit/logs/provision/test-project.log';
+    expect(file_exists($logFile))->toBeTrue();
 
-    if ($originalHome !== null) {
-        $_SERVER['HOME'] = $originalHome;
-    }
+    $content = file_get_contents($logFile);
+    expect($content)->toBeString()->toContain('WARNING: Warning message');
 });
 
 it('logs error messages with prefix', function () {
-    $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
-
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->error('Error message');
 
-    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
-    $content = file_get_contents($logFile);
-    expect($content)->toContain('ERROR: Error message');
+    $logFile = $this->testHome.'/.config/orbit/logs/provision/test-project.log';
+    expect(file_exists($logFile))->toBeTrue();
 
-    if ($originalHome !== null) {
-        $_SERVER['HOME'] = $originalHome;
-    }
+    $content = file_get_contents($logFile);
+    expect($content)->toBeString()->toContain('ERROR: Error message');
 });
 
 it('logs status broadcasts', function () {
-    $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
-
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->broadcast('installing_composer');
 
-    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
-    $content = file_get_contents($logFile);
-    expect($content)->toContain('Status: installing_composer');
+    $logFile = $this->testHome.'/.config/orbit/logs/provision/test-project.log';
+    expect(file_exists($logFile))->toBeTrue();
 
-    if ($originalHome !== null) {
-        $_SERVER['HOME'] = $originalHome;
-    }
+    $content = file_get_contents($logFile);
+    expect($content)->toBeString()->toContain('Status: installing_composer');
 });
 
 it('logs broadcast with error', function () {
-    $originalHome = $_SERVER['HOME'] ?? null;
-    $_SERVER['HOME'] = sys_get_temp_dir().'/orbit-tests';
-
     $logger = new ProvisionLogger(slug: 'test-project');
     $logger->broadcast('failed', 'Something went wrong');
 
-    $logFile = sys_get_temp_dir().'/orbit-tests/.config/orbit/logs/provision/test-project.log';
-    $content = file_get_contents($logFile);
-    expect($content)->toContain('Status: failed - Error: Something went wrong');
+    $logFile = $this->testHome.'/.config/orbit/logs/provision/test-project.log';
+    expect(file_exists($logFile))->toBeTrue();
 
-    if ($originalHome !== null) {
-        $_SERVER['HOME'] = $originalHome;
-    }
+    $content = file_get_contents($logFile);
+    expect($content)->toBeString()->toContain('Status: failed - Error: Something went wrong');
 });

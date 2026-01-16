@@ -18,7 +18,7 @@ class ConfigManager
 
     public function getConfigPath(): string
     {
-        return (getenv('HOME') ?: '/home/launchpad').'/.config/orbit';
+        return (getenv('HOME') ?: '/home/orbit').'/.config/orbit';
     }
 
     public function getWebAppPath(): string

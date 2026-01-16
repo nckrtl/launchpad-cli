@@ -81,7 +81,7 @@ final class ReverbBroadcaster
     public function broadcast(string $channel, string $event, array $data): void
     {
         // Debug logging
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
         $debugLog = "{$home}/.config/orbit/logs/reverb-debug.log";
         $timestamp = date('Y-m-d H:i:s');
 

@@ -12,7 +12,7 @@ return [
     |
     */
 
-    'path' => env('ORBIT_PATH', getenv('HOME') ?: '/home/launchpad'.'/.config/orbit'),
+    'path' => env('ORBIT_PATH', getenv('HOME') ?: '/home/orbit'.'/.config/orbit'),
 
     /*
     |--------------------------------------------------------------------------

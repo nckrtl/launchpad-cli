@@ -133,12 +133,12 @@ networks:
 
     protected function generateConfigMount(): string
     {
-        // Mount the orbit config directory to /home/launchpad/.config/orbit
+        // Mount the orbit config directory to /home/orbit/.config/orbit
         // This allows the CLI web app (running as orbit user in FrankenPHP) to read the config
         $configPath = $this->configManager->getConfigPath();
 
         if (File::isDirectory($configPath)) {
-            return "      - {$configPath}:/home/launchpad/.config/orbit:ro\n";
+            return "      - {$configPath}:/home/orbit/.config/orbit:ro\n";
         }
 
         return '';

@@ -16,7 +16,7 @@ class ApiController extends Controller
     protected function executeCommand(string $command, array $args = [], int $timeout = 30): array
     {
         $orbit = $this->findOrbitBinary();
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
 
         // Build command string
         $cmd = "{$orbit} {$command}";
@@ -66,7 +66,7 @@ class ApiController extends Controller
      */
     protected function findOrbitBinary(): string
     {
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
         $paths = [
             // Container paths
             '/usr/local/bin/orbit',
@@ -215,7 +215,7 @@ class ApiController extends Controller
      */
     public function startService(string $service): JsonResponse
     {
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
         $result = Process::timeout(30)
             ->env([
                 'HOME' => $home,
@@ -234,7 +234,7 @@ class ApiController extends Controller
      */
     public function stopService(string $service): JsonResponse
     {
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
         $result = Process::timeout(30)
             ->env([
                 'HOME' => $home,
@@ -253,7 +253,7 @@ class ApiController extends Controller
      */
     public function restartService(string $service): JsonResponse
     {
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
         $result = Process::timeout(60)
             ->env([
                 'HOME' => $home,
@@ -273,7 +273,7 @@ class ApiController extends Controller
     public function serviceLogs(Request $request, string $service): JsonResponse
     {
         $lines = min($request->input('lines', 100), 1000);
-        $home = $_SERVER['HOME'] ?? '/home/launchpad';
+        $home = $_SERVER['HOME'] ?? '/home/orbit';
 
         $result = Process::timeout(30)
             ->env([
@@ -534,5 +534,62 @@ class ApiController extends Controller
             'success' => false,
             'error' => 'GitHub operations require SSH access to the host',
         ], 501);
+    }
+
+    // ===== PHP Configuration =====
+
+    /**
+     * Get PHP configuration settings.
+     */
+    public function getPhpConfig(?string $version = null): JsonResponse
+    {
+        $args = [];
+        if ($version) {
+            $args['version'] = $version;
+        }
+        
+        return response()->json($this->executeCommand('php:config', $args));
+    }
+
+    /**
+     * Update PHP configuration settings.
+     */
+    public function setPhpConfig(Request $request, ?string $version = null): JsonResponse
+    {
+        $validated = $request->validate([
+            'upload_max_filesize' => 'nullable|string',
+            'post_max_size' => 'nullable|string',
+            'memory_limit' => 'nullable|string',
+            'max_execution_time' => 'nullable|string',
+            'max_children' => 'nullable|string',
+            'start_servers' => 'nullable|string',
+            'min_spare_servers' => 'nullable|string',
+            'max_spare_servers' => 'nullable|string',
+        ]);
+
+        $args = [];
+        if ($version) {
+            $args['version'] = $version;
+        }
+
+        // Map request fields to CLI options
+        $optionMap = [
+            'upload_max_filesize' => 'upload-max-filesize',
+            'post_max_size' => 'post-max-size',
+            'memory_limit' => 'memory-limit',
+            'max_execution_time' => 'max-execution-time',
+            'max_children' => 'max-children',
+            'start_servers' => 'start-servers',
+            'min_spare_servers' => 'min-spare-servers',
+            'max_spare_servers' => 'max-spare-servers',
+        ];
+
+        foreach ($optionMap as $requestKey => $cliOption) {
+            if (!empty($validated[$requestKey])) {
+                $args[$cliOption] = $validated[$requestKey];
+            }
+        }
+
+        return response()->json($this->executeCommand('php:config', $args, 60));
     }
 }
