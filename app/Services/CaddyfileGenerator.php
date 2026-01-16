@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Services\Platform\PlatformAdapter;
 use Illuminate\Support\Facades\File;
 
 class CaddyfileGenerator
@@ -13,8 +12,7 @@ class CaddyfileGenerator
         protected ConfigManager $configManager,
         protected SiteScanner $siteScanner,
         protected ?PhpManager $phpManager = null,
-        protected ?WorktreeService $worktreeService = null,
-        protected ?PlatformAdapter $platform = null
+        protected ?WorktreeService $worktreeService = null
     ) {
         $this->caddyfilePath = $this->configManager->getConfigPath().'/caddy/Caddyfile';
     }
@@ -130,22 +128,22 @@ class CaddyfileGenerator
 
     public function reload(): bool
     {
-        if ($this->platform === null) {
-            $this->platform = app(PlatformAdapter::class);
+        if ($this->phpManager === null) {
+            $this->phpManager = app(PhpManager::class);
         }
 
-        return $this->platform->reloadCaddy();
+        return $this->phpManager->getAdapter()->reloadCaddy();
     }
 
     public function reloadPhp(): bool
     {
-        if ($this->platform === null) {
-            $this->platform = app(PlatformAdapter::class);
+        if ($this->phpManager === null) {
+            $this->phpManager = app(PhpManager::class);
         }
 
         $defaultVersion = $this->configManager->get('default_php_version', '8.4');
 
-        return $this->platform->restartPhpFpm($defaultVersion);
+        return $this->phpManager->getAdapter()->restartPhpFpm($defaultVersion);
     }
 
     protected function getWorktreesForCaddy(): array
