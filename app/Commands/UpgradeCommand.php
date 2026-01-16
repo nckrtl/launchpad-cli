@@ -4,9 +4,6 @@ namespace App\Commands;
 
 use App\Concerns\WithJsonOutput;
 use App\Enums\ExitCode;
-use App\Services\ConfigManager;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Process;
 use LaravelZero\Framework\Commands\Command;
 
 class UpgradeCommand extends Command
@@ -21,7 +18,7 @@ class UpgradeCommand extends Command
 
     private const GITHUB_API_URL = 'https://api.github.com/repos/hardimpactdev/orbit-cli/releases/latest';
 
-    public function handle(ConfigManager $configManager): int
+    public function handle(): int
     {
         $currentVersion = config('app.version');
         $pharPath = \Phar::running(false);
@@ -115,11 +112,12 @@ class UpgradeCommand extends Command
                 );
             }
 
-            // Update the companion web app
-            if (! $this->wantsJson()) {
-                $this->info('Updating companion web app...');
-            }
-            $this->updateWebApp($configManager);
+            // Note: We intentionally do NOT update the web app here.
+            // After replacing the binary, the current process still has the old
+            // PHAR loaded in memory. Any attempt to autoload new classes will
+            // cause corruption errors as PHP reads from the replaced file on disk.
+            // The web app will be updated on next `orbit init` or can be updated
+            // manually with `orbit init --upgrade-web`.
 
             if ($this->wantsJson()) {
                 return $this->outputJsonSuccess([
@@ -127,10 +125,12 @@ class UpgradeCommand extends Command
                     'previous_version' => $currentVersion,
                     'new_version' => $latestVersion,
                     'upgraded' => true,
+                    'message' => 'Run `orbit init` to update the companion web app.',
                 ]);
             }
 
             $this->info("Successfully upgraded to {$latestVersion}!");
+            $this->info('Run `orbit init` to update the companion web app.');
 
             return self::SUCCESS;
         } finally {
@@ -139,140 +139,6 @@ class UpgradeCommand extends Command
                 @unlink($tempFile);
             }
         }
-    }
-
-    /**
-     * Update the companion web app after CLI upgrade.
-     */
-    private function updateWebApp(ConfigManager $configManager): void
-    {
-        $webAppPath = $configManager->getWebAppPath();
-
-        // Only update if web app exists
-        if (! is_dir($webAppPath)) {
-            return;
-        }
-
-        // Copy new web app files from the updated CLI
-        $sourcePath = base_path('web');
-        if (is_dir($sourcePath)) {
-            $this->copyWebAppDirectory($sourcePath, $webAppPath);
-        }
-
-        // Regenerate .env with current config
-        $this->generateWebAppEnv($configManager);
-
-        // Run composer install
-        Process::timeout(300)
-            ->path($webAppPath)
-            ->run('composer install --no-dev --no-interaction --optimize-autoloader');
-
-        // Restart Horizon to pick up new code
-        $this->call('horizon:stop');
-        sleep(2);
-        $this->call('horizon:start');
-    }
-
-    private function copyWebAppDirectory(string $source, string $destination): void
-    {
-        $excludeDirs = ['vendor', 'node_modules', '.git', 'storage/logs', 'storage/framework/cache', 'storage/framework/sessions', 'storage/framework/views'];
-        $excludeFiles = ['.env'];
-
-        $this->recursiveCopy($source, $destination, $excludeDirs, $excludeFiles);
-    }
-
-    private function recursiveCopy(string $source, string $destination, array $excludeDirs, array $excludeFiles, string $relativePath = ''): void
-    {
-        $items = File::files($source);
-        $directories = File::directories($source);
-
-        // Copy files
-        foreach ($items as $file) {
-            $filename = $file->getFilename();
-            if (in_array($filename, $excludeFiles)) {
-                continue;
-            }
-            File::copy($file->getPathname(), "{$destination}/{$filename}");
-        }
-
-        // Copy directories recursively
-        foreach ($directories as $dir) {
-            $dirname = basename((string) $dir);
-            $newRelativePath = $relativePath ? "{$relativePath}/{$dirname}" : $dirname;
-
-            // Skip excluded directories
-            $skip = false;
-            foreach ($excludeDirs as $excludeDir) {
-                if ($dirname === $excludeDir || str_starts_with($newRelativePath, (string) $excludeDir)) {
-                    $skip = true;
-                    break;
-                }
-            }
-
-            if ($skip) {
-                continue;
-            }
-
-            $newDest = "{$destination}/{$dirname}";
-            File::ensureDirectoryExists($newDest);
-            $this->recursiveCopy($dir, $newDest, $excludeDirs, $excludeFiles, $newRelativePath);
-        }
-    }
-
-    private function generateWebAppEnv(ConfigManager $configManager): void
-    {
-        $webAppPath = $configManager->getWebAppPath();
-        $tld = $configManager->getTld();
-        $reverbConfig = $configManager->getReverbConfig();
-
-        // Keep existing APP_KEY if present
-        $existingEnv = File::exists("{$webAppPath}/.env")
-            ? parse_ini_file("{$webAppPath}/.env")
-            : [];
-        $appKey = $existingEnv['APP_KEY'] ?? 'base64:'.base64_encode(random_bytes(32));
-
-        $env = <<<ENV
-APP_NAME=Orbit
-APP_ENV=production
-APP_KEY={$appKey}
-APP_DEBUG=false
-APP_URL=https://orbit.{$tld}
-
-LOG_CHANNEL=single
-LOG_LEVEL=error
-
-# Stateless - no database needed
-DB_CONNECTION=null
-
-# Redis for everything
-REDIS_CLIENT=phpredis
-REDIS_HOST=orbit-redis
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-
-# Queue via Redis
-QUEUE_CONNECTION=redis
-
-# Let Horizon track failed jobs in Redis
-QUEUE_FAILED_DRIVER=null
-
-# Cache and sessions via Redis
-CACHE_STORE=redis
-SESSION_DRIVER=redis
-SESSION_LIFETIME=120
-
-# Broadcasting via Reverb
-BROADCAST_CONNECTION=reverb
-
-REVERB_APP_ID={$reverbConfig['app_id']}
-REVERB_APP_KEY={$reverbConfig['app_key']}
-REVERB_APP_SECRET={$reverbConfig['app_secret']}
-REVERB_HOST={$reverbConfig['host']}
-REVERB_PORT={$reverbConfig['port']}
-REVERB_SCHEME=https
-ENV;
-
-        File::put("{$webAppPath}/.env", $env);
     }
 
     /**
