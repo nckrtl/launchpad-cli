@@ -44,6 +44,23 @@ jobs:
       - name: Compile PHAR
         run: php box.phar compile
 
+      - name: Verify PHAR integrity
+        run: |
+          echo "Checking PHAR file exists and has content..."
+          test -f builds/orbit.phar || (echo "PHAR file not found!" && exit 1)
+          
+          FILESIZE=$(stat -c%s builds/orbit.phar)
+          echo "PHAR size: $FILESIZE bytes"
+          test $FILESIZE -gt 1000000 || (echo "PHAR file too small, likely corrupted!" && exit 1)
+          
+          echo "Verifying PHAR executes correctly..."
+          php builds/orbit.phar --version || (echo "PHAR --version failed!" && exit 1)
+          
+          echo "Verifying PHAR commands load..."
+          php builds/orbit.phar list || (echo "PHAR list command failed!" && exit 1)
+          
+          echo "PHAR verification passed!"
+
       - name: Generate checksum
         run: sha256sum builds/orbit.phar > builds/checksums.txt
 
