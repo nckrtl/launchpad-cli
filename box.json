@@ -16,8 +16,14 @@
     "exclude-composer-files": false,
     "compression": "NONE",
     "compactors": [
-        "KevinGH\\Box\\Compactor\\Php",
-        "KevinGH\\Box\\Compactor\\Json"
+        {
+            "class": "KevinGH\\Box\\Compactor\\Php",
+            "extensions": ["php"]
+        },
+        {
+            "class": "KevinGH\\Box\\Compactor\\Json",
+            "extensions": ["json", "lock"]
+        }
     ],
     "blacklist": [
         "web/vendor",
