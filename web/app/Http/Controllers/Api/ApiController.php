@@ -433,9 +433,7 @@ class ApiController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        return response()->json($this->executeCommand('workspace:create', [
-            'name' => $validated['name'],
-        ]));
+        return response()->json($this->executeCommand('workspace:create '.escapeshellarg($validated['name'])));
     }
 
     /**
@@ -443,7 +441,7 @@ class ApiController extends Controller
      */
     public function deleteWorkspace(string $name): JsonResponse
     {
-        return response()->json($this->executeCommand('workspace:delete', ['name' => $name]));
+        return response()->json($this->executeCommand('workspace:delete '.escapeshellarg($name), ['force' => true]));
     }
 
     /**
@@ -455,10 +453,7 @@ class ApiController extends Controller
             'project' => 'required|string',
         ]);
 
-        return response()->json($this->executeCommand('workspace:add', [
-            'workspace' => $workspace,
-            'project' => $validated['project'],
-        ]));
+        return response()->json($this->executeCommand('workspace:add '.escapeshellarg($workspace).' '.escapeshellarg($validated['project'])));
     }
 
     /**
@@ -466,10 +461,7 @@ class ApiController extends Controller
      */
     public function removeWorkspaceProject(string $workspace, string $project): JsonResponse
     {
-        return response()->json($this->executeCommand('workspace:remove', [
-            'workspace' => $workspace,
-            'project' => $project,
-        ]));
+        return response()->json($this->executeCommand('workspace:remove '.escapeshellarg($workspace).' '.escapeshellarg($project)));
     }
 
     // ===== Package Linking =====
