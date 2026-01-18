@@ -3,7 +3,7 @@
     "label": "Laravel Reverb",
     "description": "Blazing fast WebSocket server for Laravel",
     "category": "communication",
-    "required": true,
+    "required": false,
     "versions": ["latest"],
     "configSchema": {
         "required": ["port"],
@@ -34,13 +34,17 @@
         }
     },
     "dockerConfig": {
-        "image": "quay.io/soketi/soketi:${version}",
-        "ports": ["8080:8080"],
+        "build": {
+            "context": "${config_path}/reverb",
+            "dockerfile": "Dockerfile"
+        },
+        "ports": ["8080:6001"],
         "environment": {
-            "SOKETI_DEFAULT_APP_ID": "orbit",
-            "SOKETI_DEFAULT_APP_KEY": "orbit-key",
-            "SOKETI_DEFAULT_APP_SECRET": "orbit-secret",
-            "SOKETI_USER_AUTHENTICATION_TIMEOUT": "30000"
+            "REVERB_APP_ID": "orbit",
+            "REVERB_APP_KEY": "orbit-key",
+            "REVERB_APP_SECRET": "orbit-secret",
+            "REVERB_HOST": "0.0.0.0",
+            "REVERB_PORT": "6001"
         }
     },
     "dependsOn": []

@@ -13,6 +13,14 @@ APP_ENV=local
 APP_KEY=${APP_KEY}
 APP_DEBUG=true
 
+# Use Redis for cache (connects to orbit-redis container)
+DB_CONNECTION=sqlite
+CACHE_STORE=redis
+SESSION_DRIVER=array
+QUEUE_CONNECTION=sync
+REDIS_HOST=${REDIS_HOST:-orbit-redis}
+REDIS_PORT=${REDIS_PORT:-6379}
+
 REVERB_APP_ID=${REVERB_APP_ID:-orbit}
 REVERB_APP_KEY=${REVERB_APP_KEY:-orbit-key}
 REVERB_APP_SECRET=${REVERB_APP_SECRET:-orbit-secret}

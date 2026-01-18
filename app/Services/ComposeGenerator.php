@@ -81,8 +81,10 @@ class ComposeGenerator
 
         // Add build config if present
         if (isset($dockerConfig['build'])) {
+            $configPath = $this->configManager->getConfigPath();
             $serviceConfig['build'] = $this->interpolateArray($dockerConfig['build'], [
                 'version' => $version,
+                'config_path' => $configPath,
             ]);
         }
 
