@@ -53,6 +53,7 @@ Route::delete('/worktrees/{site}/{name}', [ApiController::class, 'unlinkWorktree
 
 // Workspaces
 Route::get('/workspaces', [ApiController::class, 'workspaces']);
+Route::get('/workspaces/{name}', [ApiController::class, 'showWorkspace']);
 Route::post('/workspaces', [ApiController::class, 'createWorkspace']);
 Route::delete('/workspaces/{name}', [ApiController::class, 'deleteWorkspace']);
 Route::post('/workspaces/{workspace}/projects', [ApiController::class, 'addWorkspaceProject']);

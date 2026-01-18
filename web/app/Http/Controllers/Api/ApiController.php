@@ -425,6 +425,14 @@ class ApiController extends Controller
     }
 
     /**
+     * Get a single workspace.
+     */
+    public function showWorkspace(string $name): JsonResponse
+    {
+        return response()->json($this->executeCommand('workspace:show '.escapeshellarg($name)));
+    }
+
+    /**
      * Create a workspace.
      */
     public function createWorkspace(Request $request): JsonResponse
