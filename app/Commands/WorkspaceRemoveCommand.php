@@ -26,7 +26,8 @@ class WorkspaceRemoveCommand extends Command
             $info = $workspaceService->removeProject($workspace, $project);
 
             if ($this->wantsJson()) {
-                return $this->outputJsonSuccess([
+                return $this->outputJson([
+                    'success' => true,
                     'message' => "Project '{$project}' removed from workspace '{$workspace}'",
                     'workspace' => $info,
                 ]);

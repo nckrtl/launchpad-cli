@@ -26,7 +26,8 @@ class WorkspaceAddCommand extends Command
             $info = $workspaceService->addProject($workspace, $project);
 
             if ($this->wantsJson()) {
-                return $this->outputJsonSuccess([
+                return $this->outputJson([
+                    'success' => true,
                     'message' => "Project '{$project}' added to workspace '{$workspace}'",
                     'workspace' => $info,
                 ]);
