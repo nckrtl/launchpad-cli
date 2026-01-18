@@ -53,7 +53,7 @@ final readonly class ConfigureEnvironment
             $pgPort = $pgConfig['port'] ?? 5432;
 
             $env = $this->setEnvValue($env, 'DB_CONNECTION', 'pgsql');
-            $env = $this->setEnvValue($env, 'DB_HOST', 'orbit-postgres');
+            $env = $this->setEnvValue($env, 'DB_HOST', '127.0.0.1');
             $env = $this->setEnvValue($env, 'DB_PORT', (string) $pgPort);
             $env = $this->setEnvValue($env, 'DB_DATABASE', $context->slug);
             $env = $this->setEnvValue($env, 'DB_USERNAME', $pgUser);
@@ -91,7 +91,7 @@ final readonly class ConfigureEnvironment
         ], true);
 
         if ($needsRedis) {
-            $env = $this->setEnvValue($env, 'REDIS_HOST', 'orbit-redis');
+            $env = $this->setEnvValue($env, 'REDIS_HOST', '127.0.0.1');
             $env = $this->setEnvValue($env, 'REDIS_PORT', '6379');
             $logger->log('Configured Redis connection');
         }

@@ -86,7 +86,7 @@ it('configures PostgreSQL database driver', function () {
 
     $env = file_get_contents("{$this->projectPath}/.env");
     expect($env)->toContain('DB_CONNECTION=pgsql');
-    expect($env)->toContain('DB_HOST=orbit-postgres');
+    expect($env)->toContain('DB_HOST=127.0.0.1');
     expect($env)->toContain('DB_DATABASE=test-env');
 });
 
@@ -158,7 +158,7 @@ it('configures Redis connection when any driver uses redis', function () {
     $result = $action->handle($context, $this->logger);
 
     $env = file_get_contents("{$this->projectPath}/.env");
-    expect($env)->toContain('REDIS_HOST=orbit-redis');
+    expect($env)->toContain('REDIS_HOST=127.0.0.1');
     expect($env)->toContain('REDIS_PORT=6379');
 });
 
@@ -175,7 +175,7 @@ it('does not configure Redis when no driver uses it', function () {
     $result = $action->handle($context, $this->logger);
 
     $env = file_get_contents("{$this->projectPath}/.env");
-    expect($env)->not->toContain('REDIS_HOST=orbit-redis');
+    expect($env)->not->toContain('REDIS_HOST=127.0.0.1');
 });
 
 it('returns success when no .env file exists', function () {
