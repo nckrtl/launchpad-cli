@@ -49,6 +49,15 @@ ln -s /home/nckrtl/projects/orbit-cli/orbit ~/.local/bin/orbit
 
 Ensure `~/.local/bin` is in PATH (already configured in .bashrc).
 
+## After Making Changes
+
+**IMPORTANT: Always complete the full workflow:**
+
+1. **Test locally**: `./vendor/bin/pest` (if code changed)
+2. **Add tests**: Every feature must have Pest tests
+3. **Commit changes**: Use descriptive commit message
+4. **Push via gh CLI**: `git push`
+
 ## Release Workflow
 
 After fixes verified (all tests pass):
