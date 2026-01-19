@@ -145,6 +145,62 @@ When regenerating configs, ensure:
 - Log paths point to `~/.config/orbit/logs/phpXX-fpm.log`
 - Environment variables include PATH with `~/.bun/bin` for bun access
 
+## Host Services (Systemd/Launchd)
+
+### Horizon Queue Worker
+
+Horizon runs as a systemd service on Linux, processing queues for the bundled web app.
+
+**Service file:** `/etc/systemd/system/orbit-horizon.service`
+
+```ini
+[Unit]
+Description=Orbit Horizon Queue Worker
+After=network.target
+
+[Service]
+Type=simple
+User=nckrtl
+Group=nckrtl
+WorkingDirectory=/home/nckrtl/.config/orbit/web
+ExecStart=/usr/bin/php artisan horizon
+Restart=always
+RestartSec=5
+Environment="PATH=/home/nckrtl/.local/bin:/home/nckrtl/.bun/bin:/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Commands:**
+```bash
+sudo systemctl status orbit-horizon   # Check status
+sudo systemctl restart orbit-horizon  # Restart
+sudo journalctl -u orbit-horizon -f   # View logs
+```
+
+**Requirements:**
+- The bundled web app (`~/.config/orbit/web`) must have `laravel/horizon` installed
+- Redis must be running for queue processing
+
+### Laravel Reverb WebSocket Server
+
+Reverb runs as a Docker container for real-time WebSocket communication.
+
+**Default port:** `8080` (not 6001 - that was Soketi/Pusher's default)
+
+**Configuration:**
+- Docker container: `orbit-reverb`
+- Port mapping: `8080:8080`
+- Caddy proxies `reverb.{tld}` to `localhost:8080`
+
+**Environment variables for client apps:**
+```env
+REVERB_HOST=reverb.{tld}
+REVERB_PORT=443        # Via Caddy TLS proxy
+REVERB_SCHEME=https
+```
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
