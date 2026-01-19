@@ -23,7 +23,7 @@ RUN composer create-project laravel/laravel . --prefer-dist --no-interaction --n
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 6001
+EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=6001", "-v"]
+CMD ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080", "-v"]

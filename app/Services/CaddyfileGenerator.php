@@ -120,8 +120,8 @@ class CaddyfileGenerator
         header Connection *Upgrade*
         header Upgrade websocket
     }
-    reverse_proxy @websocket localhost:6001
-    reverse_proxy localhost:6001
+    reverse_proxy @websocket localhost:8080
+    reverse_proxy localhost:8080
 }
 
 ";
