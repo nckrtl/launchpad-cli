@@ -167,7 +167,7 @@ describe('PhpTool', function () {
 
     it('gets php version for a site', function () {
         $this->databaseService->shouldReceive('getPhpVersion')->with('mysite')->andReturn('8.4');
-        $this->databaseService->shouldReceive('getProjectOverride')->with('mysite')->andReturn([
+        $this->databaseService->shouldReceive('getSiteOverride')->with('mysite')->andReturn([
             'path' => '/path/to/mysite',
         ]);
         $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.5');

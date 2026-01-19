@@ -32,7 +32,7 @@ final readonly class SetPhpVersion
         $logger->log('Wrote .php-version file');
 
         // Update database
-        app(DatabaseService::class)->setProjectPhpVersion(
+        app(DatabaseService::class)->setSitePhpVersion(
             $context->slug,
             $context->projectPath,
             $version

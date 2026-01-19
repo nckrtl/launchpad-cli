@@ -10,6 +10,11 @@ class DatabaseService
 
     protected string $dbPath;
 
+    public function getPdo(): ?PDO
+    {
+        return $this->db;
+    }
+
     public function __construct(?string $dbPath = null)
     {
         $this->dbPath = $dbPath ?? $this->getDefaultDbPath();
@@ -45,36 +50,37 @@ class DatabaseService
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             $this->db->exec('
-                CREATE TABLE IF NOT EXISTS projects (
+                CREATE TABLE IF NOT EXISTS sites (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     slug VARCHAR(255) NOT NULL UNIQUE,
                     path VARCHAR(500) NOT NULL,
                     php_version VARCHAR(10) NULL,
+                    project_id INTEGER NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ');
-            $this->db->exec('CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug)');
+            $this->db->exec('CREATE INDEX IF NOT EXISTS idx_sites_slug ON sites(slug)');
         } catch (\Exception) {
             // If database initialization fails, we continue without it
             $this->db = null;
         }
     }
 
-    public function getProjectOverride(string $slug): ?array
+    public function getSiteOverride(string $slug): ?array
     {
         if ($this->db === null) {
             return null;
         }
 
-        $stmt = $this->db->prepare('SELECT * FROM projects WHERE slug = ?');
+        $stmt = $this->db->prepare('SELECT * FROM sites WHERE slug = ?');
         $stmt->execute([$slug]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $result ?: null;
     }
 
-    public function setProjectPhpVersion(string $slug, string $path, ?string $version): void
+    public function setSitePhpVersion(string $slug, string $path, ?string $version): void
     {
         if ($this->db === null) {
             return;
@@ -82,7 +88,7 @@ class DatabaseService
 
         $now = date('Y-m-d H:i:s');
         $stmt = $this->db->prepare('
-            INSERT INTO projects (slug, path, php_version, created_at, updated_at)
+            INSERT INTO sites (slug, path, php_version, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(slug) DO UPDATE SET
                 path = excluded.path,
@@ -92,13 +98,13 @@ class DatabaseService
         $stmt->execute([$slug, $path, $version, $now, $now]);
     }
 
-    public function removeProjectOverride(string $slug): void
+    public function removeSiteOverride(string $slug): void
     {
         if ($this->db === null) {
             return;
         }
 
-        $stmt = $this->db->prepare('DELETE FROM projects WHERE slug = ?');
+        $stmt = $this->db->prepare('DELETE FROM sites WHERE slug = ?');
         $stmt->execute([$slug]);
     }
 
@@ -108,14 +114,14 @@ class DatabaseService
             return [];
         }
 
-        $stmt = $this->db->query('SELECT * FROM projects WHERE php_version IS NOT NULL');
+        $stmt = $this->db->query('SELECT * FROM sites WHERE php_version IS NOT NULL');
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function getPhpVersion(string $slug): ?string
     {
-        $override = $this->getProjectOverride($slug);
+        $override = $this->getSiteOverride($slug);
 
         return $override['php_version'] ?? null;
     }
@@ -137,6 +143,6 @@ class DatabaseService
             return;
         }
 
-        $this->db->exec('DELETE FROM projects');
+        $this->db->exec('DELETE FROM sites');
     }
 }

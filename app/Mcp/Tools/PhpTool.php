@@ -100,7 +100,7 @@ class PhpTool extends Tool
 
     protected function setPhpVersion(string $site, string $path, string $version): Response|ResponseFactory
     {
-        $this->databaseService->setProjectPhpVersion($site, $path, $version);
+        $this->databaseService->setSitePhpVersion($site, $path, $version);
 
         return Response::structured([
             'success' => true,
@@ -112,7 +112,7 @@ class PhpTool extends Tool
 
     protected function resetPhpVersion(string $site): Response|ResponseFactory
     {
-        $this->databaseService->removeProjectOverride($site);
+        $this->databaseService->removeSiteOverride($site);
         $defaultVersion = $this->configManager->getDefaultPhpVersion();
 
         return Response::structured([
@@ -126,7 +126,7 @@ class PhpTool extends Tool
     protected function getSitePath(string $site): ?string
     {
         // Try to get from database first
-        $override = $this->databaseService->getProjectOverride($site);
+        $override = $this->databaseService->getSiteOverride($site);
         if ($override && isset($override['path'])) {
             return $override['path'];
         }

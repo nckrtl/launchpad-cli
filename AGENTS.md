@@ -6,15 +6,16 @@ This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get sta
 
 **Orbit CLI** - Local PHP dev environment powered by Docker. Supports both Linux and macOS.
 
-## Bundled Web App
+## Unified Web Dashboard
 
-The `web/` directory contains a Laravel web app that is bundled with the CLI. This is the dashboard/API that powers the desktop app integration.
+The web dashboard is now a unified app (`orbit-web`) that is bundled with the CLI as a pre-built archive.
 
-- Source: `web/` in this repo
+- Source: `hardimpactdev/orbit-web` repository
+- Bundle: `stubs/orbit-web-bundle.tar.gz`
 - Installed to: `~/.config/orbit/web/` on user machines
-- The CLI copies `web/` during init/upgrade
+- Command: `orbit web:install` extracts the bundle and configures the environment.
 
-When making changes to the web app, edit files in `web/` - NOT in `~/.config/orbit/web/` (that's the installed copy).
+When making changes to the web app, edit files in the `orbit-web` repository and rebuild the bundle.
 
 ## Quick Reference
 

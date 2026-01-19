@@ -50,7 +50,7 @@ class PhpCommand extends Command
 
         if ($reset) {
             // Remove from database
-            $databaseService->removeProjectOverride($site);
+            $databaseService->removeSiteOverride($site);
             // Also remove from config (legacy cleanup)
             $configManager->removeSiteOverride($site);
 
@@ -100,7 +100,7 @@ class PhpCommand extends Command
         }
 
         // Save to database (new way)
-        $databaseService->setProjectPhpVersion($site, $siteInfo['path'], $version);
+        $databaseService->setSitePhpVersion($site, $siteInfo['path'], $version);
 
         // Only regenerate Caddyfile if site has public folder
         $reloaded = false;

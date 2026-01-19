@@ -1010,18 +1010,10 @@ Tests use Pest PHP. Helper functions in `tests/Pest.php`:
 
 ### Desktop Flow Test
 
-The web app includes an E2E test that replicates the desktop app workflow:
+The project includes an E2E test that replicates the desktop app workflow:
 
 ```bash
-# Run from the web app directory
-cd ~/projects/orbit-cli/web
 php tests/e2e-desktop-flow-test.php
-
-# Use different TLD
-TLD=test php tests/e2e-desktop-flow-test.php
-
-# Create project but skip deletion (for debugging)
-php tests/e2e-desktop-flow-test.php --keep
 ```
 
 **What it tests:**
@@ -1039,7 +1031,7 @@ php tests/e2e-desktop-flow-test.php --keep
 **Requirements:**
 
 - Full orbit stack running (Caddy, PHP, Redis, Horizon, Reverb)
-- Web app deployed at `~/.config/orbit/web/`
+- Unified web dashboard (`orbit-web`) installed and running
 - Horizon processing jobs
 
 ## WebSocket Broadcasting
@@ -1087,9 +1079,9 @@ Events are broadcast to two channels:
 
 Both events include: `{ slug, status, timestamp, error? }`
 
-## Web App (API Backend)
+## Unified Web Dashboard
 
-Located at `web/` directory, deployed to `~/.config/orbit/web/`.
+The web dashboard is now a unified app (`orbit-web`) that is bundled with the CLI as a pre-built archive. It provides the API backend for project management and the desktop app.
 
 ### Job Flow
 
@@ -1099,15 +1091,6 @@ Located at `web/` directory, deployed to `~/.config/orbit/web/`.
 4. **CLI** performs operation and broadcasts status via `ReverbBroadcaster`
 5. **Desktop** receives updates via WebSocket
 
-### Updating the Deployed Web App
+### Updating the Web App
 
-After making changes to `web/`:
-
-```bash
-# Copy to deployed location
-cp -r ~/projects/orbit-cli/web/* ~/.config/orbit/web/
-
-# Clear config cache and restart Horizon
-cd ~/.config/orbit/web && php artisan config:clear
-orbit horizon:restart
-```
+The web app is bundled in `stubs/orbit-web-bundle.tar.gz`. To update it, build a new bundle from the `orbit-web` repository and replace the stub.

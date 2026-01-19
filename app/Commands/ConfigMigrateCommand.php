@@ -45,7 +45,7 @@ final class ConfigMigrateCommand extends Command
 
                 if ($path) {
                     try {
-                        $databaseService->setProjectPhpVersion($slug, $path, $override['php_version']);
+                        $databaseService->setSitePhpVersion($slug, $path, $override['php_version']);
                         $migrated++;
 
                         if (! $this->wantsJson()) {

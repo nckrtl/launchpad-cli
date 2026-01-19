@@ -9,34 +9,46 @@ use LaravelZero\Framework\Commands\Command;
 
 class WebInstallCommand extends Command
 {
-    protected $signature = 'web:install {--force : Overwrite existing installation}';
+    protected $signature = 'web:install {--force : Overwrite existing installation} {--dry-run : Show what would be done without making changes}';
 
-    protected $description = 'Install or update the companion web app';
+    protected $description = 'Install or update the companion web app from bundle';
 
     public function handle(ConfigManager $configManager): int
     {
-        $sourcePath = base_path('web');
+        $bundlePath = base_path('stubs/orbit-web-bundle.tar.gz');
         $destPath = $configManager->getWebAppPath();
 
-        // Check if source exists
-        if (! File::isDirectory($sourcePath)) {
-            $this->error('Web app source not found. This CLI version may not include the web app.');
+        if (! File::exists($bundlePath)) {
+            $this->error('Web app bundle not found at: '.$bundlePath);
+            $this->error('This CLI version may not include the web app bundle.');
 
             return self::FAILURE;
         }
 
         // Check if already installed
-        if (File::isDirectory($destPath) && ! $this->option('force')) {
+        if (File::isDirectory($destPath) && ! $this->option('force') && ! $this->option('dry-run')) {
             $this->info('Web app already installed. Use --force to reinstall.');
 
             return self::SUCCESS;
         }
 
-        $this->info('Installing companion web app...');
+        $this->info('Installing companion web app from bundle...');
 
-        // Copy web app files
-        $this->task('Copying web app files', function () use ($sourcePath, $destPath) {
-            $this->copyWebAppDirectory($sourcePath, $destPath);
+        if ($this->option('dry-run')) {
+            $this->info('[DRY RUN] Would extract bundle to: '.$destPath);
+            $this->info('[DRY RUN] Would set permissions: chmod 755 for directories and 644 for files');
+            $this->info('[DRY RUN] Would generate environment file');
+            $this->info('[DRY RUN] Would update Caddy configuration');
+
+            return self::SUCCESS;
+        }
+
+        // Extract bundle
+        $this->task('Extracting web app bundle', fn () => $this->extractBundle($bundlePath, $destPath));
+
+        // Set permissions
+        $this->task('Setting file permissions', function () use ($destPath) {
+            $this->setPermissions($destPath);
 
             return true;
         });
@@ -48,16 +60,7 @@ class WebInstallCommand extends Command
             return true;
         });
 
-        // Run composer install
-        $this->task('Installing dependencies', function () use ($destPath) {
-            $result = Process::timeout(300)
-                ->path($destPath)
-                ->run('composer install --no-dev --no-interaction --optimize-autoloader');
-
-            return $result->successful();
-        });
-
-        // Regenerate Caddyfile to include orbit.{tld}
+        // Regenerate Caddyfile
         $this->task('Updating Caddy configuration', function () {
             $result = Process::run('orbit caddy:generate 2>/dev/null');
 
@@ -69,73 +72,49 @@ class WebInstallCommand extends Command
         $this->info('');
         $this->info('To complete setup:');
         $this->info('  1. Restart Orbit: orbit restart');
-        $this->info('  2. Horizon will start with other services');
         $tld = $configManager->getTld();
-        $this->info("  3. Access at: https://orbit.{$tld}");
+        $this->info("  2. Access at: https://orbit.{$tld}");
 
         return self::SUCCESS;
     }
 
-    protected function copyWebAppDirectory(string $source, string $destination): void
+    protected function extractBundle(string $bundlePath, string $destination): bool
     {
-        $excludeDirs = ['vendor', 'node_modules', '.git', 'storage/logs', 'storage/framework/cache', 'storage/framework/sessions', 'storage/framework/views'];
-        $excludeFiles = ['.env'];
+        if (File::isDirectory($destination) && $this->option('force')) {
+            File::deleteDirectory($destination);
+        }
 
         File::ensureDirectoryExists($destination);
 
-        $this->recursiveCopy($source, $destination, $excludeDirs, $excludeFiles);
+        // Using tar command for better reliability and performance
+        $result = Process::run("tar -xzf {$bundlePath} -C {$destination}");
 
-        // Ensure storage directories exist with proper permissions
-        $storageDirs = [
-            "{$destination}/storage/app",
-            "{$destination}/storage/framework/cache",
-            "{$destination}/storage/framework/sessions",
-            "{$destination}/storage/framework/views",
-            "{$destination}/storage/logs",
-            "{$destination}/bootstrap/cache",
-        ];
-
-        foreach ($storageDirs as $dir) {
-            File::ensureDirectoryExists($dir);
-            chmod($dir, 0775);
-        }
+        return $result->successful();
     }
 
-    protected function recursiveCopy(string $source, string $destination, array $excludeDirs, array $excludeFiles, string $relativePath = ''): void
+    protected function setPermissions(string $path): void
     {
-        $items = File::files($source);
-        $directories = File::directories($source);
+        // Set directory permissions to 755
+        $process = Process::run("find {$path} -type d -exec chmod 755 {} +");
 
-        // Copy files
-        foreach ($items as $file) {
-            $filename = $file->getFilename();
-            if (in_array($filename, $excludeFiles)) {
-                continue;
-            }
-            File::copy($file->getPathname(), "{$destination}/{$filename}");
+        // Set file permissions to 644
+        $process = Process::run("find {$path} -type f -exec chmod 644 {} +");
+
+        // Ensure artisan is executable
+        if (File::exists("{$path}/artisan")) {
+            chmod("{$path}/artisan", 0755);
         }
 
-        // Copy directories recursively
-        foreach ($directories as $dir) {
-            $dirname = basename((string) $dir);
-            $newRelativePath = $relativePath ? "{$relativePath}/{$dirname}" : $dirname;
+        // Ensure storage and bootstrap/cache are writable (775)
+        $writableDirs = [
+            "{$path}/storage",
+            "{$path}/bootstrap/cache",
+        ];
 
-            // Skip excluded directories
-            $skip = false;
-            foreach ($excludeDirs as $excludeDir) {
-                if ($dirname === $excludeDir || str_starts_with($newRelativePath, (string) $excludeDir)) {
-                    $skip = true;
-                    break;
-                }
+        foreach ($writableDirs as $dir) {
+            if (File::isDirectory($dir)) {
+                Process::run("chmod -R 775 {$dir}");
             }
-
-            if ($skip) {
-                continue;
-            }
-
-            $newDest = "{$destination}/{$dirname}";
-            File::ensureDirectoryExists($newDest);
-            $this->recursiveCopy($dir, $newDest, $excludeDirs, $excludeFiles, $newRelativePath);
         }
     }
 
@@ -145,7 +124,6 @@ class WebInstallCommand extends Command
         $tld = $configManager->getTld();
         $reverbConfig = $configManager->getReverbConfig();
 
-        // Keep existing APP_KEY if present (parse manually to handle base64 = chars)
         $appKey = null;
         if (File::exists("{$webAppPath}/.env")) {
             $envContent = File::get("{$webAppPath}/.env");
@@ -165,29 +143,25 @@ APP_URL=https://orbit.{$tld}
 LOG_CHANNEL=single
 LOG_LEVEL=error
 
-# Stateless - no database needed
-DB_CONNECTION=null
+# CLI Mode configuration
+ORBIT_MODE=cli
+DB_CONNECTION=sqlite
+DB_DATABASE={$configManager->getConfigPath()}/database.sqlite
 
-# Redis (localhost since PHP-FPM runs on host)
+# Redis
 REDIS_CLIENT=phpredis
 REDIS_HOST=localhost
-REDIS_PASSWORD=null
 REDIS_PORT=6379
 
 # Queue via Redis
 QUEUE_CONNECTION=redis
 
-# Let Horizon track failed jobs in Redis
-QUEUE_FAILED_DRIVER=null
-
 # Cache and sessions via Redis
 CACHE_STORE=redis
 SESSION_DRIVER=redis
-SESSION_LIFETIME=120
 
 # Broadcasting via Reverb
 BROADCAST_CONNECTION=reverb
-
 REVERB_APP_ID={$reverbConfig['app_id']}
 REVERB_APP_KEY={$reverbConfig['app_key']}
 REVERB_APP_SECRET={$reverbConfig['app_secret']}

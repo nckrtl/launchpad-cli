@@ -45,6 +45,28 @@ Make sure `~/.local/bin` is in your PATH.
 
 5. Visit https://myapp.test in your browser!
 
+## Companion Web Dashboard
+
+Orbit includes a unified web dashboard (powered by `orbit-web`) that provides a visual interface for managing your local development environment.
+
+### Installation
+
+The web app is bundled with the CLI and can be installed using:
+
+```bash
+orbit web:install
+```
+
+Once installed, it will be available at `https://orbit.test` (or your configured TLD).
+
+### Features
+
+- **Visual Project Management** - Create, delete, and monitor projects.
+- **Service Control** - Start, stop, and configure services (PostgreSQL, Redis, etc.).
+- **PHP Configuration** - Visual editor for PHP settings and versions.
+- **Log Viewer** - Tail logs for all services and projects.
+- **Real-time Updates** - Powered by Reverb for instant status updates.
+
 ## Commands
 
 | Command | Description |

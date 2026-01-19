@@ -29,59 +29,59 @@ it('returns correct database path', function () {
     expect($this->db->getDbPath())->toBe($this->dbPath);
 });
 
-it('stores and retrieves project PHP version', function () {
-    $this->db->setProjectPhpVersion('my-project', '/path/to/project', '8.4');
+it('stores and retrieves site PHP version', function () {
+    $this->db->setSitePhpVersion('my-site', '/path/to/site', '8.4');
 
-    $version = $this->db->getPhpVersion('my-project');
+    $version = $this->db->getPhpVersion('my-site');
     expect($version)->toBe('8.4');
 });
 
-it('returns null for non-existent project', function () {
+it('returns null for non-existent site', function () {
     $version = $this->db->getPhpVersion('non-existent');
     expect($version)->toBeNull();
 });
 
-it('updates existing project', function () {
-    $this->db->setProjectPhpVersion('my-project', '/path/to/project', '8.3');
-    $this->db->setProjectPhpVersion('my-project', '/path/to/project', '8.4');
+it('updates existing site', function () {
+    $this->db->setSitePhpVersion('my-site', '/path/to/site', '8.3');
+    $this->db->setSitePhpVersion('my-site', '/path/to/site', '8.4');
 
-    $version = $this->db->getPhpVersion('my-project');
+    $version = $this->db->getPhpVersion('my-site');
     expect($version)->toBe('8.4');
 });
 
-it('retrieves full project override', function () {
-    $this->db->setProjectPhpVersion('my-project', '/path/to/project', '8.4');
+it('retrieves full site override', function () {
+    $this->db->setSitePhpVersion('my-site', '/path/to/site', '8.4');
 
-    $override = $this->db->getProjectOverride('my-project');
+    $override = $this->db->getSiteOverride('my-site');
 
     expect($override)->not->toBeNull();
-    expect($override['slug'])->toBe('my-project');
-    expect($override['path'])->toBe('/path/to/project');
+    expect($override['slug'])->toBe('my-site');
+    expect($override['path'])->toBe('/path/to/site');
     expect($override['php_version'])->toBe('8.4');
 });
 
-it('removes project override', function () {
-    $this->db->setProjectPhpVersion('my-project', '/path/to/project', '8.4');
-    $this->db->removeProjectOverride('my-project');
+it('removes site override', function () {
+    $this->db->setSitePhpVersion('my-site', '/path/to/site', '8.4');
+    $this->db->removeSiteOverride('my-site');
 
-    $override = $this->db->getProjectOverride('my-project');
+    $override = $this->db->getSiteOverride('my-site');
     expect($override)->toBeNull();
 });
 
 it('returns all overrides', function () {
-    $this->db->setProjectPhpVersion('project-1', '/path/1', '8.3');
-    $this->db->setProjectPhpVersion('project-2', '/path/2', '8.4');
-    $this->db->setProjectPhpVersion('project-3', '/path/3', null);
+    $this->db->setSitePhpVersion('site-1', '/path/1', '8.3');
+    $this->db->setSitePhpVersion('site-2', '/path/2', '8.4');
+    $this->db->setSitePhpVersion('site-3', '/path/3', null);
 
     $overrides = $this->db->getAllOverrides();
 
-    // Only projects with php_version set are returned
+    // Only sites with php_version set are returned
     expect($overrides)->toHaveCount(2);
 });
 
 it('truncates all data', function () {
-    $this->db->setProjectPhpVersion('project-1', '/path/1', '8.3');
-    $this->db->setProjectPhpVersion('project-2', '/path/2', '8.4');
+    $this->db->setSitePhpVersion('site-1', '/path/1', '8.3');
+    $this->db->setSitePhpVersion('site-2', '/path/2', '8.4');
 
     $this->db->truncate();
 

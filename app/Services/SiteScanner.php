@@ -13,11 +13,11 @@ class SiteScanner
 
     /**
      * Scan all directories in configured paths.
-     * Returns ALL directories as projects, with has_public_folder flag.
+     * Returns ALL directories as sites, with has_public_folder flag.
      */
     public function scan(): array
     {
-        $projects = [];
+        $sites = [];
         $paths = $this->configManager->getPaths();
         $tld = $this->configManager->getTld();
         $defaultPhp = $this->configManager->getDefaultPhpVersion();
@@ -34,11 +34,11 @@ class SiteScanner
                     $hasPublicFolder = File::isDirectory($customPath.'/public');
                     $phpVersion = $this->detectPhpVersion($customPath, $name, $defaultPhp);
 
-                    $project = [
+                    $site = [
                         'name' => $name,
                         'display_name' => $this->getDisplayName($customPath, $name),
                         'github_repo' => $this->getGitHubRepo($customPath),
-                        'project_type' => $this->getProjectType($customPath),
+                        'site_type' => $this->getSiteType($customPath),
                         'path' => $customPath,
                         'has_public_folder' => $hasPublicFolder,
                         'php_version' => $phpVersion,
@@ -47,17 +47,17 @@ class SiteScanner
 
                     // Only add site info if has public folder
                     if ($hasPublicFolder) {
-                        $project['domain'] = "{$name}.{$tld}";
-                        $project['site_url'] = "https://{$name}.{$tld}";
-                        $project['secure'] = true;
+                        $site['domain'] = "{$name}.{$tld}";
+                        $site['site_url'] = "https://{$name}.{$tld}";
+                        $site['secure'] = true;
                     }
 
-                    $projects[] = $project;
+                    $sites[] = $site;
                 }
             }
         }
 
-        // Then scan configured paths for auto-discovered projects (ALL directories)
+        // Then scan configured paths for auto-discovered sites (ALL directories)
         foreach ($paths as $path) {
             $expandedPath = $this->expandPath($path);
 
@@ -80,11 +80,11 @@ class SiteScanner
                 $hasPublicFolder = File::isDirectory($directory.'/public');
                 $phpVersion = $this->detectPhpVersion($directory, $name, $defaultPhp);
 
-                $project = [
+                $site = [
                     'name' => $name,
                     'display_name' => $this->getDisplayName($directory, $name),
                     'github_repo' => $this->getGitHubRepo($directory),
-                    'project_type' => $this->getProjectType($directory),
+                    'site_type' => $this->getSiteType($directory),
                     'path' => $directory,
                     'has_public_folder' => $hasPublicFolder,
                     'php_version' => $phpVersion,
@@ -93,22 +93,22 @@ class SiteScanner
 
                 // Only add site info if has public folder
                 if ($hasPublicFolder) {
-                    $project['domain'] = "{$name}.{$tld}";
-                    $project['site_url'] = "https://{$name}.{$tld}";
-                    $project['secure'] = true;
+                    $site['domain'] = "{$name}.{$tld}";
+                    $site['site_url'] = "https://{$name}.{$tld}";
+                    $site['secure'] = true;
                 }
 
-                $projects[] = $project;
+                $sites[] = $site;
             }
         }
 
-        usort($projects, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
+        usort($sites, fn ($a, $b) => strcmp((string) $a['name'], (string) $b['name']));
 
-        return $projects;
+        return $sites;
     }
 
     /**
-     * Get only sites (projects with public folder) for Caddyfile generation.
+     * Get only sites (sites with public folder) for Caddyfile generation.
      */
     public function scanSites(): array
     {
@@ -129,7 +129,7 @@ class SiteScanner
             $version = trim(File::get($phpVersionFile));
             if ($this->isValidPhpVersion($version)) {
                 // Migrate to database
-                $this->databaseService->setProjectPhpVersion($name, $directory, $version);
+                $this->databaseService->setSitePhpVersion($name, $directory, $version);
 
                 return $version;
             }
@@ -160,11 +160,11 @@ class SiteScanner
 
     public function findSite(string $name): ?array
     {
-        $projects = $this->scan();
+        $sites = $this->scan();
 
-        foreach ($projects as $project) {
-            if ($project['name'] === $name) {
-                return $project;
+        foreach ($sites as $site) {
+            if ($site['name'] === $name) {
+                return $site;
             }
         }
 
@@ -177,7 +177,7 @@ class SiteScanner
     }
 
     /**
-     * Get display name for a project from .env APP_NAME or generate from slug.
+     * Get display name for a site from .env APP_NAME or generate from slug.
      */
     protected function getDisplayName(string $directory, string $slug): string
     {
@@ -217,9 +217,9 @@ class SiteScanner
     }
 
     /**
-     * Detect the project type based on file structure.
+     * Detect the site type based on file structure.
      */
-    protected function getProjectType(string $directory): string
+    protected function getSiteType(string $directory): string
     {
         $hasPublicFolder = File::isDirectory($directory.'/public');
         $hasArtisan = File::exists($directory.'/artisan');

@@ -27,7 +27,7 @@ it('sets php version for a site', function () {
         'has_custom_php' => false,
         'has_public_folder' => true,
     ]);
-    $this->databaseService->shouldReceive('setProjectPhpVersion')->with('mysite', '/path/to/mysite', '8.4')->once();
+    $this->databaseService->shouldReceive('setSitePhpVersion')->with('mysite', '/path/to/mysite', '8.4')->once();
     $this->caddyfileGenerator->shouldReceive('generate')->once();
     $this->caddyfileGenerator->shouldReceive('reload')->andReturn(true);
 
@@ -45,7 +45,7 @@ it('resets php version to default', function () {
         'has_custom_php' => true,
         'has_public_folder' => true,
     ]);
-    $this->databaseService->shouldReceive('removeProjectOverride')->with('mysite')->once();
+    $this->databaseService->shouldReceive('removeSiteOverride')->with('mysite')->once();
     $this->configManager->shouldReceive('removeSiteOverride')->with('mysite')->once();
     $this->configManager->shouldReceive('getDefaultPhpVersion')->andReturn('8.3');
     $this->caddyfileGenerator->shouldReceive('generate')->once();
@@ -88,7 +88,7 @@ it('outputs json when --json flag is used', function () {
         'has_custom_php' => false,
         'has_public_folder' => true,
     ]);
-    $this->databaseService->shouldReceive('setProjectPhpVersion')->with('mysite', '/path/to/mysite', '8.4')->once();
+    $this->databaseService->shouldReceive('setSitePhpVersion')->with('mysite', '/path/to/mysite', '8.4')->once();
     $this->caddyfileGenerator->shouldReceive('generate')->once();
     $this->caddyfileGenerator->shouldReceive('reload')->andReturn(true);
 
@@ -104,7 +104,7 @@ it('skips caddy reload for projects without public folder', function () {
         'has_custom_php' => false,
         'has_public_folder' => false,
     ]);
-    $this->databaseService->shouldReceive('setProjectPhpVersion')->with('mypackage', '/path/to/mypackage', '8.4')->once();
+    $this->databaseService->shouldReceive('setSitePhpVersion')->with('mypackage', '/path/to/mypackage', '8.4')->once();
     // Note: caddyfileGenerator should NOT be called
 
     $this->artisan('php mypackage 8.4')
